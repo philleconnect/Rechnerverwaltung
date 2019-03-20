@@ -80,7 +80,10 @@
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
-                    url: "http://192.168.255.255:49100/status"
+                    url: "http://192.168.255.255:49100/status",
+                    data: {
+                        apikey: "<?php file_get_contents('config/config.txt'); ?>"
+                    }
                 },
             }));
             request.onreadystatechange=stateChangedServices;
@@ -145,6 +148,7 @@
                 servermanager: {
                     url: "http://192.168.255.255:49100/control",
                     data: {
+                        apikey: "<?php file_get_contents('config/config.txt'); ?>",
                         container: name,
                         action: action
                     }
@@ -180,6 +184,7 @@
                 servermanager: {
                     url: "http://192.168.255.255:49100/updatecheck",
                     data: {
+                        apikey: "<?php file_get_contents('config/config.txt'); ?>",
                         container: name
                     }
                 },
@@ -210,6 +215,9 @@
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
                     url: "http://192.168.255.255:49100/manager",
+                    data: {
+                        apikey: "<?php file_get_contents('config/config.txt'); ?>"
+                    }
                 },
             }));
             managerRequest.onreadystatechange=stateChangedManagerCheck;

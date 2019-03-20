@@ -67,7 +67,10 @@
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
-                    url: "http://192.168.255.255:49100/repo"
+                    url: "http://192.168.255.255:49100/repo",
+                    data: {
+                        apikey: "<?php file_get_contents('config/config.txt'); ?>"
+                    }
                 },
             }));
             request.onreadystatechange=stateChangedRepo;

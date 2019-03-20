@@ -83,7 +83,7 @@
             }
         }
         function writeTable() {
-            document.getElementById().innerHTML = "";
+            document.getElementById("tablecontent").innerHTML = "";
             for (var i = 0; i < plugins.length; i++) {
                 if (plugins[i].installed) {
                     var action = "Bereits installiert.";
@@ -95,7 +95,7 @@
                 } else {
                     var license = "Kostenlos (Open Source)";
                 }
-                document.getElementById().innerHTML += "<td>" + plugins[i].name + "</td><td>" + plugins[i].description + "</td><td>" + license + "</td><td>" + action + "</td>";
+                document.getElementById("tablecontent").innerHTML += "<td>" + plugins[i].name + "</td><td>" + plugins[i].description + "</td><td>" + license + "</td><td>" + action + "</td>";
             }
             preloader.toggle();
         }

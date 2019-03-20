@@ -220,7 +220,7 @@
                 if (request.readyState == 4) {
                     var response = JSON.parse(JSON.parse(request.responseText).servermanager);
                     if (response.available) {
-                        document.getElementById("servermanager_version").innerHTML = "Servermanager-Version: " + response.actual + ". <a href=\"#\" onclick=\"updateManager(\"" + response.available + "\")\">Auf Version " + response.available + "aktualisieren.</a>";
+                        document.getElementById("servermanager_version").innerHTML = "Servermanager-Version: " + response.actual + ". <a href=\"#\" onclick=\"updateManager(\"" + response.available + "\")\">Auf Version " + response.available + " aktualisieren.</a>";
                     } else {
                         document.getElementById("servermanager_version").innerHTML = "Servermanager-Version: " + response.actual + ".";
                     }

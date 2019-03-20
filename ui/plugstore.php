@@ -69,7 +69,7 @@
                 servermanager: {
                     url: "http://192.168.255.255:49100/repo",
                     data: {
-                        apikey: "<?php echo file_get_contents('../config/apikey.txt'); ?>"
+                        apikey: "<?php echo trim(file_get_contents('../config/apikey.txt')); ?>"
                     }
                 },
             }));

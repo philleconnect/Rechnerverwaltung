@@ -87,7 +87,7 @@
         }
         function writeTable() {
             document.getElementById("tablecontent").innerHTML = "";
-            for (var i = 0; i < services.length, i++) {
+            for (var i = 0; i < services.length; i++) {
                 if (services[i].status) {
                     var status = "<i class=\"f7-icons\" style=\"color: green;\">play_round_fill</i>";
                     var runAction = "<a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";

@@ -57,14 +57,16 @@
     </div>
     <script>
         var navigation = responsiveNav("foo", {customToggle: ".nav-toggle"});
-        setFilterGrid("services", {
-            col_0: "none",
-            col_3: "select",
-            col_4: "none",
-            col_5: "none",
-            display_all_text: "Alle anzeigen",
-            sort_select: true
-        });
+        function renewTableSort() {
+            setFilterGrid("services", {
+                col_0: "none",
+                col_3: "select",
+                col_4: "none",
+                col_5: "none",
+                display_all_text: "Alle anzeigen",
+                sort_select: true
+            });
+        }
         var services = null;
         function getAjaxRequest() {
             var ajax = null;
@@ -121,16 +123,23 @@
                 document.getElementById("tablecontent").innerHTML += "<td>" + status + "</td><td>" + services[i].name + "</td><td>" + services[i].version + "</td><td>" + setting + "</td><td id=\"update_" + services[i].name + "\">Prüfung läuft...</td><td>" + actions + "</td>";
                 checkIfUpdateAvailable(services[i].name);
             }
+            renewTableSort();
             preloader.toggle();
         }
         function runService(name, mode) {
+            if (mode) {
+                var action = "start";
+            } else {
+                var action = "stop";
+            }
             request = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
                     url: "http://192.168.255.255:49100/control",
                     data: {
-                        container: name
+                        container: name,
+                        action: action
                     }
                 },
             }));
@@ -186,6 +195,7 @@
         function updateService(name, version) {
 
         }
+        renewTableSort();
         getServices();
     </script>
 </body>

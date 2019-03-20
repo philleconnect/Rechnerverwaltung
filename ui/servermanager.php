@@ -57,15 +57,15 @@
     </div>
     <script>
         var navigation = responsiveNav("foo", {customToggle: ".nav-toggle"});
-        function renewTableSort() {
-            setFilterGrid("services", {
+        function renewTableSort() { //TODO: Fix creation of two selection controls
+            /*setFilterGrid("services", {
                 col_0: "none",
                 col_3: "select",
                 col_4: "none",
                 col_5: "none",
                 display_all_text: "Alle anzeigen",
                 sort_select: true
-            });
+            });*/
         }
         var services = null;
         function getAjaxRequest() {
@@ -184,7 +184,9 @@
             function stateChangedUpdateCheck() {
                 if (request.readyState == 4) {
                     var response = JSON.parse(JSON.parse(request.responseText).servermanager);
-                    if (response.actualVersion == response.latestPossible) {
+                    if (response.error) {
+                        document.getElementById("update_" + name).innerHTML = "Fehler.";
+                    } else if (response.actualVersion == response.latestPossible) {
                         document.getElementById("update_" + name).innerHTML = "Aktuell: " + response.actualVersion;
                     } else {
                         document.getElementById("update_" + name).innerHTML = "<a href=\"#\" onclick=\"updateService(\"" + name + "\", \"" + response.latestPossible + "\")\">Auf " + response.latestPossible + " aktualisieren.</a>";

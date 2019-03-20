@@ -160,8 +160,8 @@
             runRequest.send(params);
             function stateChangedRun() {
                 if (runRequest.readyState == 4) {
-                    var response = JSON.parse(runRequest.responseText);
-                    if (response.servermanager == "SUCCESS") {
+                    var response = JSON.parse(JSON.parse(runRequest.responseText).servermanager);
+                    if (response.status == "SUCCESS") {
                         swal({
                             title: "Aktion erfolgreich ausgeführt.",
                             type: "success"

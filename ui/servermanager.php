@@ -38,6 +38,7 @@
             <p>Dein Browser unterstützt kein JavaScript oder JavaScript ist ausgeschaltet. Du musst JavaScript aktivieren, um diese Seite zu verwenden!</p>
         </noscript>
         <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>SERVER</b>MANAGEMENT</p>
+        <p>Servermanager-Version: <div id="servermanager_actual">Laden...</div><div id="servermanager_update"></div></p>
         <p>Installierte Services:</p>
         <div class="datagrid">
             <table id="services">
@@ -202,8 +203,34 @@
         function updateService(name, version) {
 
         }
+        function checkManagerVersion() {
+            request = getAjaxRequest();
+            var url = "../api/api.php";
+            var params = "request=" + encodeURIComponent(JSON.stringify({
+                servermanager: {
+                    url: "http://192.168.255.255:49100/manager",
+                },
+            }));
+            request.onreadystatechange=stateChangedManagerCheck;
+            request.open("POST",url,true);
+            request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            request.send(params);
+            function stateChangedManagerCheck() {
+                if (request.readyState == 4) {
+                    var response = JSON.parse(JSON.parse(request.responseText).servermanager);
+                    document.getElementById("servermanager_actual").innerHTML = response.actual;
+                    if (response.available) {
+                        document.getElementById("servermanager_update").innerHTML = ". <a href=\"#\" onclick=\"updateManager(\"" + response.available + "\")\">Auf Version " + response.available + "aktualisieren.</a>";
+                    }
+                }
+            }
+        }
+        function updateManager() {
+
+        }
         renewTableSort();
         getServices();
+        checkManagerVersion();
     </script>
 </body>
 </html>

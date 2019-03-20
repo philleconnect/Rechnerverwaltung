@@ -38,11 +38,56 @@
             <p>Dein Browser unterstützt kein JavaScript oder JavaScript ist ausgeschaltet. Du musst JavaScript aktivieren, um diese Seite zu verwenden!</p>
         </noscript>
         <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>SERVER</b>MANAGEMENT</p>
-        
+        <p>Installierte Services:</p>
+        <div class="datagrid">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Status:</th>
+                        <th>Name:</th>
+                        <th>Version:</th>
+                        <th>Einstellung:</th>
+                        <th>Aktualisierung:</th>
+                        <th>Aktionen:</th>
+                    </tr>
+                </thead>
+                <tbody id="tablecontent">
+
+                </tbody>
+            </table>
+        </div>
     </div>
     <script>
         var navigation = responsiveNav("foo", {customToggle: ".nav-toggle"});
+        var services = null;
+        function getAjaxRequest() {
+            var ajax = null;
+            ajax = new XMLHttpRequest;
+            return ajax;
+        }
+        function getServices() {
+            request = getAjaxRequest();
+            var url = "../api/api.php";
+            var params = "request=" + encodeURIComponent(JSON.stringify({
+                servermanager: {
+                    url: "http://192.168.255.255:49100/status",
+                    data: []
+                },
+            }));
+            request.onreadystatechange=stateChangedServices;
+            request.open("POST",url,true);
+            request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            request.send(params);
+            function stateChangedServices() {
+                if (request.readyState == 4) {
+                    var response = JSON.parse(request.responseText);
+                    services = response.servermanager;
+                }
+            }
+        }
+        function writeTable() {
 
+        }
     </script>
 </body>
 </html>

@@ -46,6 +46,8 @@
                 include "includes/deletegroupfolder.php";
             } elseif (isset($client_request->changegroupfolder)) {
                 include "includes/changegroupfolder.php";
+            } elseif (isset($client_request->servermanager)) {
+                include "includer/servermanager.php";
             }
         }
     }

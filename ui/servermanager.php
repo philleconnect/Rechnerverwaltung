@@ -40,7 +40,7 @@
         <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>SERVER</b>MANAGEMENT</p>
         <p>Installierte Services:</p>
         <div class="datagrid">
-            <table>
+            <table id="services">
                 <thead>
                     <tr>
                         <th>Status:</th>
@@ -57,6 +57,14 @@
     </div>
     <script>
         var navigation = responsiveNav("foo", {customToggle: ".nav-toggle"});
+        setFilterGrid("services", {
+            col_0: "none",
+            col_3: "select",
+            col_4: "none",
+            col_5: "none",
+            display_all_text: "Alle anzeigen",
+            sort_select: true
+        });
         var services = null;
         function getAjaxRequest() {
             var ajax = null;
@@ -69,8 +77,7 @@
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
-                    url: "http://192.168.255.255:49100/status",
-                    data: {}
+                    url: "http://192.168.255.255:49100/status"
                 },
             }));
             request.onreadystatechange=stateChangedServices;
@@ -88,12 +95,18 @@
         function writeTable() {
             document.getElementById("tablecontent").innerHTML = "";
             for (var i = 0; i < services.length; i++) {
-                if (services[i].status) {
+                if (services[i].status == "running") {
                     var status = "<i class=\"f7-icons\" style=\"color: green;\">play_round_fill</i>";
                     var runAction = "<a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
-                } else {
-                    var status = "<i class=\"f7-icons\" style=\"color: red;\">close_round_fill</i>";
+                } else if (services[i].status == "paused") {
+                    var status = "<i class=\"f7-icons\">close_round_fill</i>";
                     var runAction = "<a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", true)\">Aktivieren</a>";
+                } else if (services[i].status == "installing" || services[i].status == "updating") {
+                    var status = "<i class=\"f7-icons\" style=\"color: blue;\">reload_round_fill</i>";
+                    var runAction = "";
+                } else {
+                    var status = "<i class=\"f7-icons\" style=\"color: red;\">close_round_fill</i>";
+                    var runAction = "";
                 }
                 if (services[i].wanted) {
                     var setting = "Aktiviert";
@@ -105,7 +118,8 @@
                 } else {
                     var actions = runAction + "<br /><a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
                 }
-                document.getElementById("tablecontent").innerHTML += "<td>" + status + "</td><td>" + services[i].name + "</td><td>" + services[i].version + "</td><td>" + setting + "</td><td></td><td>" + runAction + "</td>";
+                document.getElementById("tablecontent").innerHTML += "<td>" + status + "</td><td>" + services[i].name + "</td><td>" + services[i].version + "</td><td>" + setting + "</td><td id=\"update_" + services[i].name + "\">Prüfung läuft...</td><td>" + actions + "</td>";
+                checkIfUpdateAvailable(services[i].name);
             }
             preloader.toggle();
         }
@@ -120,11 +134,11 @@
                     }
                 },
             }));
-            request.onreadystatechange=stateChangedServices;
+            request.onreadystatechange=stateChangedRun;
             request.open("POST",url,true);
             request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
             request.send(params);
-            function stateChangedServices() {
+            function stateChangedRun() {
                 if (request.readyState == 4) {
                     var response = JSON.parse(request.responseText);
                     if (response.servermanager == "SUCCESS") {
@@ -143,6 +157,36 @@
                 }
             }
         }
+        function checkIfUpdateAvailable(name) {
+            request = getAjaxRequest();
+            var url = "../api/api.php";
+            var params = "request=" + encodeURIComponent(JSON.stringify({
+                servermanager: {
+                    url: "http://192.168.255.255:49100/updatecheck",
+                    data: {
+                        container: name
+                    }
+                },
+            }));
+            request.onreadystatechange=stateChangedUpdateCheck;
+            request.open("POST",url,true);
+            request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            request.send(params);
+            function stateChangedUpdateCheck() {
+                if (request.readyState == 4) {
+                    var response = JSON.parse(JSON.parse(request.responseText).servermanager);
+                    if (response.actualVersion == response.latestPossible) {
+                        document.getElementById("update_" + name).innerHTML = "Aktuell: " + response.actualVersion;
+                    } else {
+                        document.getElementById("update_" + name).innerHTML = "<a href=\"#\" onclick=\"updateService(\"" + name + "\", \"" + response.latestPossible + "\")\">Auf " + response.latestPossible + " aktualisieren.</a>";
+                    }
+                }
+            }
+        }
+        function updateService(name, version) {
+
+        }
+        getServices();
     </script>
 </body>
 </html>

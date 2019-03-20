@@ -97,6 +97,11 @@
         function writeTable() {
             document.getElementById("tablecontent").innerHTML = "";
             for (var i = 0; i < services.length; i++) {
+                if ((i % 2) == 0) {
+                    var style = "<tr>";
+                } else {
+                    var style = "<tr class=\"alt\">";
+                }
                 if (services[i].status == "running") {
                     var status = "<i class=\"f7-icons\" style=\"color: green;\">play_round_fill</i>";
                     var runAction = "<a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
@@ -120,7 +125,7 @@
                 } else {
                     var actions = runAction + "<br /><a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
                 }
-                document.getElementById("tablecontent").innerHTML += "<td>" + status + "</td><td>" + services[i].name + "</td><td>" + services[i].version + "</td><td>" + setting + "</td><td id=\"update_" + services[i].name + "\">Prüfung läuft...</td><td>" + actions + "</td>";
+                document.getElementById("tablecontent").innerHTML += style + "<td>" + status + "</td><td>" + services[i].name + "</td><td>" + services[i].version + "</td><td>" + setting + "</td><td id=\"update_" + services[i].name + "\">Prüfung läuft...</td><td>" + actions + "</td></tr>";
                 checkIfUpdateAvailable(services[i].name);
             }
             renewTableSort();

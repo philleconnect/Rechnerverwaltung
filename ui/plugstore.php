@@ -86,9 +86,9 @@
             document.getElementById("tablecontent").innerHTML = "";
             for (var i = 0; i < plugins.length; i++) {
                 if ((i % 2) == 0) {
-                    var style = "<tr class=\"alt\">";
-                } else {
                     var style = "<tr>";
+                } else {
+                    var style = "<tr class=\"alt\">";
                 }
                 if (plugins[i].installed) {
                     var action = "Bereits installiert.";

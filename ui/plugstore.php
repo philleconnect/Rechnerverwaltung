@@ -85,6 +85,11 @@
         function writeTable() {
             document.getElementById("tablecontent").innerHTML = "";
             for (var i = 0; i < plugins.length; i++) {
+                if ((i % 2) == 0) {
+                    var style = "<tr class=\"alt\">";
+                } else {
+                    var style = "<tr>";
+                }
                 if (plugins[i].installed) {
                     var action = "Bereits installiert.";
                 } else {
@@ -95,7 +100,7 @@
                 } else {
                     var license = "Kostenlos (Open Source)";
                 }
-                document.getElementById("tablecontent").innerHTML += "<td>" + plugins[i].name + "</td><td>" + plugins[i].description + "</td><td>" + license + "</td><td>" + action + "</td>";
+                document.getElementById("tablecontent").innerHTML += style + "<td>" + plugins[i].name + "</td><td>" + plugins[i].description + "</td><td>" + license + "</td><td>" + action + "</td></tr>";
             }
             preloader.toggle();
         }

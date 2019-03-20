@@ -130,6 +130,7 @@
                 checkIfUpdateAvailable(services[i].name);
             }
             renewTableSort();
+            checkManagerVersion();
             preloader.toggle();
         }
         function runService(name, mode) {
@@ -231,7 +232,6 @@
         }
         renewTableSort();
         getServices();
-        checkManagerVersion();
     </script>
 </body>
 </html>

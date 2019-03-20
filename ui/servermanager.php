@@ -38,7 +38,7 @@
             <p>Dein Browser unterstützt kein JavaScript oder JavaScript ist ausgeschaltet. Du musst JavaScript aktivieren, um diese Seite zu verwenden!</p>
         </noscript>
         <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>SERVER</b>MANAGEMENT</p>
-        <p>Servermanager-Version: <div id="servermanager_actual">Laden...</div><div id="servermanager_update"></div></p>
+        <p id="servermanager_version">Servermanager-Version: Laden...</p>
         <p>Installierte Services:</p>
         <div class="datagrid">
             <table id="services">
@@ -218,9 +218,10 @@
             function stateChangedManagerCheck() {
                 if (request.readyState == 4) {
                     var response = JSON.parse(JSON.parse(request.responseText).servermanager);
-                    document.getElementById("servermanager_actual").innerHTML = response.actual;
                     if (response.available) {
-                        document.getElementById("servermanager_update").innerHTML = ". <a href=\"#\" onclick=\"updateManager(\"" + response.available + "\")\">Auf Version " + response.available + "aktualisieren.</a>";
+                        document.getElementById("servermanager_version").innerHTML = "Servermanager-Version: " + response.actual + ". <a href=\"#\" onclick=\"updateManager(\"" + response.available + "\")\">Auf Version " + response.available + "aktualisieren.</a>";
+                    } else {
+                        document.getElementById("servermanager_version").innerHTML = "Servermanager-Version: " + response.actual + ".";
                     }
                 }
             }

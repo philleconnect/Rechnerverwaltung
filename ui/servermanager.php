@@ -38,7 +38,7 @@
             <p>Dein Browser unterstützt kein JavaScript oder JavaScript ist ausgeschaltet. Du musst JavaScript aktivieren, um diese Seite zu verwenden!</p>
         </noscript>
         <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>SERVER</b>MANAGEMENT</p>
-        <p id="servermanager_version">Servermanager-Version: Laden...</p>
+        <p id="servermanager_version">ServerManager-Version: Laden...</p>
         <p>Installierte Services:</p>
         <div class="datagrid">
             <table id="services">
@@ -139,7 +139,7 @@
             } else {
                 var action = "stop";
             }
-            request = getAjaxRequest();
+            runRequest = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
@@ -150,13 +150,13 @@
                     }
                 },
             }));
-            request.onreadystatechange=stateChangedRun;
-            request.open("POST",url,true);
-            request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            request.send(params);
+            runRequest.onreadystatechange=stateChangedRun;
+            runRequest.open("POST",url,true);
+            runRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            runRequest.send(params);
             function stateChangedRun() {
-                if (request.readyState == 4) {
-                    var response = JSON.parse(request.responseText);
+                if (runRequest.readyState == 4) {
+                    var response = JSON.parse(runRequest.responseText);
                     if (response.servermanager == "SUCCESS") {
                         swal({
                             title: "Aktion erfolgreich ausgeführt.",
@@ -174,7 +174,7 @@
             }
         }
         function checkIfUpdateAvailable(name) {
-            request = getAjaxRequest();
+            updateRequest = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
@@ -184,13 +184,13 @@
                     }
                 },
             }));
-            request.onreadystatechange=stateChangedUpdateCheck;
-            request.open("POST",url,true);
-            request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            request.send(params);
+            updateRequest.onreadystatechange=stateChangedUpdateCheck;
+            updateRequest.open("POST",url,true);
+            updateRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            updateRequest.send(params);
             function stateChangedUpdateCheck() {
-                if (request.readyState == 4) {
-                    var response = JSON.parse(JSON.parse(request.responseText).servermanager);
+                if (updateRequest.readyState == 4) {
+                    var response = JSON.parse(JSON.parse(updateRequest.responseText).servermanager);
                     if (response.error) {
                         document.getElementById("update_" + name).innerHTML = "Fehler.";
                     } else if (response.actualVersion == response.latestPossible) {
@@ -205,24 +205,24 @@
 
         }
         function checkManagerVersion() {
-            request = getAjaxRequest();
+            managerRequest = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
                     url: "http://192.168.255.255:49100/manager",
                 },
             }));
-            request.onreadystatechange=stateChangedManagerCheck;
-            request.open("POST",url,true);
-            request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            request.send(params);
+            managerRequest.onreadystatechange=stateChangedManagerCheck;
+            managerRequest.open("POST",url,true);
+            managerRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            managerRequest.send(params);
             function stateChangedManagerCheck() {
-                if (request.readyState == 4) {
-                    var response = JSON.parse(JSON.parse(request.responseText).servermanager);
+                if (managerRequest.readyState == 4) {
+                    var response = JSON.parse(JSON.parse(managerRequest.responseText).servermanager);
                     if (response.available) {
-                        document.getElementById("servermanager_version").innerHTML = "Servermanager-Version: " + response.actual + ". <a href=\"#\" onclick=\"updateManager(\"" + response.available + "\")\">Auf Version " + response.available + " aktualisieren.</a>";
+                        document.getElementById("servermanager_version").innerHTML = "ServerManager-Version: " + response.actual + ". <a href=\"#\" onclick=\"updateManager(\"" + response.available + "\")\">Auf Version " + response.available + " aktualisieren.</a>";
                     } else {
-                        document.getElementById("servermanager_version").innerHTML = "Servermanager-Version: " + response.actual + ".";
+                        document.getElementById("servermanager_version").innerHTML = "ServerManager-Version: " + response.actual + ".";
                     }
                 }
             }

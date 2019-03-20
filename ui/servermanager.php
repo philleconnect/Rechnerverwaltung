@@ -51,9 +51,7 @@
                         <th>Aktionen:</th>
                     </tr>
                 </thead>
-                <tbody id="tablecontent">
-
-                </tbody>
+                <tbody id="tablecontent"></tbody>
             </table>
         </div>
     </div>
@@ -66,12 +64,13 @@
             return ajax;
         }
         function getServices() {
+            preloader.toggle("LADEN");
             request = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
                     url: "http://192.168.255.255:49100/status",
-                    data: []
+                    data: {}
                 },
             }));
             request.onreadystatechange=stateChangedServices;
@@ -81,12 +80,68 @@
             function stateChangedServices() {
                 if (request.readyState == 4) {
                     var response = JSON.parse(request.responseText);
-                    services = response.servermanager;
+                    services = JSON.parse(response.servermanager);
+                    writeTable();
                 }
             }
         }
         function writeTable() {
-
+            document.getElementById("tablecontent").innerHTML = "";
+            for (var i = 0; i < services.length, i++) {
+                if (services[i].status) {
+                    var status = "<i class=\"f7-icons\" style=\"color: green;\">play_round_fill</i>";
+                    var runAction = "<a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
+                } else {
+                    var status = "<i class=\"f7-icons\" style=\"color: red;\">close_round_fill</i>";
+                    var runAction = "<a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", true)\">Aktivieren</a>";
+                }
+                if (services[i].wanted) {
+                    var setting = "Aktiviert";
+                } else {
+                    var setting = "Deaktiviert";
+                }
+                if (services[i].name == "core") {
+                    var actions = "Keine Aktionen für Core.";
+                } else {
+                    var actions = runAction + "<br /><a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
+                }
+                document.getElementById("tablecontent").innerHTML += "<td>" + status + "</td><td>" + services[i].name + "</td><td>" + services[i].version + "</td><td>" + setting + "</td><td></td><td>" + runAction + "</td>";
+            }
+            preloader.toggle();
+        }
+        function runService(name, mode) {
+            request = getAjaxRequest();
+            var url = "../api/api.php";
+            var params = "request=" + encodeURIComponent(JSON.stringify({
+                servermanager: {
+                    url: "http://192.168.255.255:49100/control",
+                    data: {
+                        container: name
+                    }
+                },
+            }));
+            request.onreadystatechange=stateChangedServices;
+            request.open("POST",url,true);
+            request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            request.send(params);
+            function stateChangedServices() {
+                if (request.readyState == 4) {
+                    var response = JSON.parse(request.responseText);
+                    if (response.servermanager == "SUCCESS") {
+                        swal({
+                            title: "Aktion erfolgreich ausgeführt.",
+                            type: "success"
+                        });
+                    } else {
+                        swal({
+                            title: "Es ist ein Fehler aufgetreten.",
+                            text: "Bitte erneut versuchen.",
+                            type: "error"
+                        });
+                    }
+                    getServices();
+                }
+            }
         }
     </script>
 </body>

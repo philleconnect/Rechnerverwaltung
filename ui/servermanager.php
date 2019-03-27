@@ -130,7 +130,7 @@
                     var actions = runAction + "<br /><a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
                 }
                 if (services[i].previous != "") {
-                    var previous = "<br /><a href=\"#\" onclick=\"revertService(\"" + services[i].name + ""\")\">Zurück zu " + services[i].previous + "</a>";
+                    var previous = "<br /><a href=\"#\" onclick=\"revertService(\"" + services[i].name + "\")\">Zurück zu " + services[i].previous + "</a>";
                 } else {
                     var previous = "";
                 }

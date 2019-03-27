@@ -129,7 +129,12 @@
                 } else {
                     var actions = runAction + "<br /><a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
                 }
-                document.getElementById("tablecontent").innerHTML += style + "<td>" + status + "</td><td>" + services[i].name + "</td><td>" + services[i].version + "</td><td>" + setting + "</td><td id=\"update_" + services[i].name + "\">Prüfung läuft...</td><td>" + actions + "</td></tr>";
+                if (services[i].previous != "") {
+                    var previous = "<br /><a href=\"#\" onclick=\"revertService(\"" + services[i].name + ""\")\">Zurück zu " + services[i].previous + "</a>";
+                } else {
+                    var previous = "";
+                }
+                document.getElementById("tablecontent").innerHTML += style + "<td>" + status + "</td><td>" + services[i].name + "</td><td>" + services[i].version + previous + "</td><td>" + setting + "</td><td id=\"update_" + services[i].name + "\">Prüfung läuft...</td><td>" + actions + "</td></tr>";
                 checkIfUpdateAvailable(services[i].name);
             }
             renewTableSort();
@@ -207,7 +212,64 @@
             }
         }
         function updateService(name, version) {
+            swal({
+                title: name + "auf Version " + version + "aktualisieren?",
+                text: "Durch die Aktualisierung ist dieser Service für einige Zeit nicht verfügbar. Wir empfehlen dies nur zu Zeiten durchzuführen, zu denen keiner mit dem System arbeitet. Die Aktualisierung kann einige Zeit in Anspruch nehmen. Bitte diese Seite nicht neu laden.",
+                type: "question",
+                showCancelButton: true,
+                cancelButtonText: 'Abbrechen',
+                confirmButtonText: 'Aktualisieren',
+                preConfirm: function() {
+                    return new Promise(function(resolve) {
+                        updateServiceWorker(name, version, resolve);
+                    }
+                }
+            })
+        }
+        function updateServiceWorker(name, service, resolve) {
+            doUpdateRequest = getAjaxRequest();
+            var url = "../api/api.php";
+            var params = "request=" + encodeURIComponent(JSON.stringify({
+                servermanager: {
+                    url: "http://192.168.255.255:49100/executeupdate",
+                    data: {
+                        apikey: "<?php echo trim(file_get_contents('../config/apikey.txt')); ?>",
+                        container: name,
+                        version: version
+                    }
+                },
+            }));
+            doUpdateRequest.onreadystatechange=stateChangedDoUpdateCheck;
+            doUpdateRequest.open("POST",url,true);
+            doUpdateRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            doUpdateRequest.send(params);
+            function stateChangedDoUpdateCheck() {
+                if (doUpdateRequest.readyState == 4) {
+                    var response = JSON.parse(JSON.parse(doUpdateRequest.responseText).servermanager);
+                    if (response.error) {
+                        document.getElementById("update_" + name).innerHTML = "Fehler.";
+                    } else if (response.actualVersion == response.latestPossible) {
+                        document.getElementById("update_" + name).innerHTML = "Aktuell: " + response.actualVersion;
+                    } else {
+                        document.getElementById("update_" + name).innerHTML = "<a href=\"#\" onclick=\"updateService(\"" + name + "\", \"" + response.latestPossible + "\")\">Auf " + response.latestPossible + " aktualisieren.</a>";
+                    }
+                }
+            }
+        }
+        function revertService(name) {
+            swal({
+                title: "WARNUNG! Service wirklich auf vorherige Version zurücksetzen?",
+                text: "Durch das Zurücksetzen auf die vorherige Version kann es zu Inkompatibilitäten mit bereits erzeugten Daten kommen. Wir empfehlen, diese Funktion ausschließlich direkt nach fehlgeschlagenen Aktualisierungen zu nutzen!",
+                type: "warning",
+                showCancelButton: true,
+                cancelButtonText: 'Abbrechen',
+                confirmButtonText: 'Zurücksetzen',
+                preConfirm: function() {
+                    return new Promise(function(resolve) {
 
+                    }
+                }
+            })
         }
         function checkManagerVersion() {
             managerRequest = getAjaxRequest();

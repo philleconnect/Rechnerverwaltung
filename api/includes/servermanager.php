@@ -1,12 +1,12 @@
 <?php
-    $curl = curl_init();
-    $url = $client_request->servermanager->url;
-    curl_setopt($curl, CURLOPT_POST, 1);
-    if (isset($client_request->servermanager->data)) {
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $client_request->servermanager->data);
-    }
-    curl_setopt($curl, CURLOPT_URL, $url);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-    $client_response['servermanager'] = curl_exec($curl);
-    curl_close($curl);
+    $pararray = (array) $client_request->servermanager->data;
+    $options = array(
+        'http' => array(
+            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method' => 'POST',
+            'content' => http_build_query($pararray)
+        )
+    );
+    $context = stream_context_create($options);
+    $client_response['servermanager'] = file_get_contents($client_request->servermanager->url, false, $context);
 ?>

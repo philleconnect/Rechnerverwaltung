@@ -108,10 +108,10 @@
                 }
                 if (services[i].status == "running") {
                     var status = "<i class=\"f7-icons\" style=\"color: green;\">play_round_fill</i>";
-                    var runAction = "<a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
+                    var runAction = "<a href=\"#\" onclick=\"runService('" + services[i].name + "', false)\">Deaktivieren</a>";
                 } else if (services[i].status == "paused") {
                     var status = "<i class=\"f7-icons\">close_round_fill</i>";
-                    var runAction = "<a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", true)\">Aktivieren</a>";
+                    var runAction = "<a href=\"#\" onclick=\"runService('" + services[i].name + "', true)\">Aktivieren</a>";
                 } else if (services[i].status == "installing" || services[i].status == "updating") {
                     var status = "<i class=\"f7-icons\" style=\"color: blue;\">reload_round_fill</i>";
                     var runAction = "";
@@ -127,10 +127,10 @@
                 if (services[i].name == "core") {
                     var actions = "Keine Aktionen für Core.";
                 } else {
-                    var actions = runAction + "<br /><a href=\"#\" onclick=\"runService(\"" + services[i].name + "\", false)\">Deaktivieren</a>";
+                    var actions = runAction + "<br /><a href=\"#\" onclick=\"runService('" + services[i].name + "', false)\">Deaktivieren</a>";
                 }
                 if (services[i].previous != "") {
-                    var previous = "<br /><a href=\"#\" onclick=\"revertService(\"" + services[i].name + "\")\">Zurück zu " + services[i].previous + "</a>";
+                    var previous = "<br /><a href=\"#\" onclick=\"revertService('" + services[i].name + "')\">Zurück zu " + services[i].previous + "</a>";
                 } else {
                     var previous = "";
                 }
@@ -206,7 +206,7 @@
                     } else if (response.actualVersion == response.latestPossible) {
                         document.getElementById("update_" + name).innerHTML = "Aktuell: " + response.actualVersion;
                     } else {
-                        document.getElementById("update_" + name).innerHTML = "<a href=\"#\" onclick=\"updateService(\"" + name + "\", \"" + response.latestPossible + "\")\">Auf " + response.latestPossible + " aktualisieren.</a>";
+                        document.getElementById("update_" + name).innerHTML = "<a href=\"#\" onclick=\"updateService('" + name + "', '" + response.latestPossible + "')\">Auf " + response.latestPossible + " aktualisieren.</a>";
                     }
                 }
             }
@@ -222,7 +222,7 @@
                 preConfirm: function() {
                     return new Promise(function(resolve) {
                         updateServiceWorker(name, version, resolve);
-                    }
+                    })
                 }
             })
         }
@@ -246,13 +246,7 @@
             function stateChangedDoUpdateCheck() {
                 if (doUpdateRequest.readyState == 4) {
                     var response = JSON.parse(JSON.parse(doUpdateRequest.responseText).servermanager);
-                    if (response.error) {
-                        document.getElementById("update_" + name).innerHTML = "Fehler.";
-                    } else if (response.actualVersion == response.latestPossible) {
-                        document.getElementById("update_" + name).innerHTML = "Aktuell: " + response.actualVersion;
-                    } else {
-                        document.getElementById("update_" + name).innerHTML = "<a href=\"#\" onclick=\"updateService(\"" + name + "\", \"" + response.latestPossible + "\")\">Auf " + response.latestPossible + " aktualisieren.</a>";
-                    }
+
                 }
             }
         }
@@ -267,7 +261,7 @@
                 preConfirm: function() {
                     return new Promise(function(resolve) {
 
-                    }
+                    })
                 }
             })
         }
@@ -290,7 +284,7 @@
                 if (managerRequest.readyState == 4) {
                     var response = JSON.parse(JSON.parse(managerRequest.responseText).servermanager);
                     if (response.available) {
-                        document.getElementById("servermanager_version").innerHTML = "ServerManager-Version: " + response.actual + ". <a href=\"#\" onclick=\"updateManager(\"" + response.available + "\")\">Auf Version " + response.available + " aktualisieren.</a>";
+                        document.getElementById("servermanager_version").innerHTML = "ServerManager-Version: " + response.actual + ". <a href=\"#\" onclick=\"updateManager('" + response.available + "')\">Auf Version " + response.available + " aktualisieren.</a>";
                     } else {
                         document.getElementById("servermanager_version").innerHTML = "ServerManager-Version: " + response.actual + ".";
                     }

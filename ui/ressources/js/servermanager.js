@@ -5,7 +5,7 @@
 var servermanager = {
     services: null,
     environment: {
-        getEnvironmentVariables: function(data, callback) {
+        getEnvironmentVariables: function(data, name) {
             var steps = [];
             var questions = [];
             for (var i = 1; i <= data.length; i++) {
@@ -25,11 +25,11 @@ var servermanager = {
                     for (var i = 0; i < output.length; i++) {
                         output.push({key:data[i].name,value:result.value[i]});
                     }
-                    servermanager.environment.storeEnvironmentVariables(output, callback);
+                    servermanager.environment.storeEnvironmentVariables(output, name);
                 }
             })
         },
-        storeEnvironmentVariables: function(data, callback) {
+        storeEnvironmentVariables: function(data, name) {
             envStoreRequest = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
@@ -51,7 +51,7 @@ var servermanager = {
                     var response = JSON.parse(JSON.parse(envStoreRequest.responseText).servermanager);
                     if (response.result == "SUCCESS") {
                         if (data.length <= 0) {
-                            callback();
+                            servermanager.service.updatePending(name);
                         } else {
                             data.shift()
                             servermanager.environment.storeEnvironmentVariables(data, callback);
@@ -231,7 +231,7 @@ var servermanager = {
                                 } else if (response.result == "running") {
                                     servermanager.service.updatePending(name);
                                 } else {
-                                    servermanager.environment.getEnvironmentVariables(response.result);
+                                    servermanager.environment.getEnvironmentVariables(response.result, name);
                                 }
                             }
                         }
@@ -255,7 +255,49 @@ var servermanager = {
             })
         },
         updatePending: function(name) {
-
+            updatePendingRequest = getAjaxRequest();
+            var url = "../api/api.php";
+            var params = "request=" + encodeURIComponent(JSON.stringify({
+                servermanager: {
+                    url: "http://192.168.255.255:49100/updatestatus",
+                    data: {
+                        apikey: apikey,
+                        service: name
+                    }
+                },
+            }));
+            updatePendingRequest.onreadystatechange=stateChangedUpdatePendingCheck;
+            updatePendingRequest.open("POST",url,true);
+            updatePendingRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            updatePendingRequest.send(params);
+            function stateChangedUpdatePendingCheck() {
+                if (updatePendingRequest.readyState == 4) {
+                    var response = JSON.parse(JSON.parse(updatePendingRequest.responseText).servermanager);
+                    if (response.error) {
+                        swal({
+                            title: "Es ist ein Fehler aufgetreten.",
+                            text: "Bitte versuchen Sie erneut, das Update durchzuführen.",
+                            type: "error"
+                        })
+                    } else {
+                        if (response.result == "updating") {
+                            setTimeout(function() {servermanager.service.updatePending(name);}, 2000);
+                        } else if (response.result == "finished") {
+                            swal({
+                                title: "Das Update wurde erfolgreich durchgeführt.",
+                                text: "Der Service " + name + " ist jetzt in der aktuellen Version installiert.",
+                                type: "success"
+                            })
+                        } else {
+                            swal({
+                                title: "Beim Updatevorgang ist ein Fehler aufgetreten.",
+                                text: "Die vorherige Version des Service wurde wiederhergestellt.",
+                                type: "error"
+                            })
+                        }
+                    }
+                }
+            }
         }
     },
     writeTable: function() {

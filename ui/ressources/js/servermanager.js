@@ -188,7 +188,7 @@ var servermanager = {
                     } else if (response.actualVersion == response.latestPossible) {
                         document.getElementById("update_" + name).innerHTML = "Aktuell: " + response.actualVersion;
                     } else {
-                        document.getElementById("update_" + name).innerHTML = "<a href=\"#\" onclick=\"updateService('" + name + "', '" + response.latestPossible + "')\">Auf " + response.latestPossible + " aktualisieren.</a>";
+                        document.getElementById("update_" + name).innerHTML = "<a href=\"#\" onclick=\"servermanager.service.update('" + name + "', '" + response.latestPossible + "')\">Auf " + response.latestPossible + " aktualisieren.</a>";
                     }
                 }
             }

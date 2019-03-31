@@ -54,7 +54,6 @@ var servermanager = {
                             swal({
                                 title: "Das Update wird jetzt durchgeführt.",
                                 text: "Dies kann einige Minuten dauern. Bitte diese Seite nicht neu laden!",
-                                showLoaderOnConfirm: true,
                                 allowOutsideClick: false,
                                 allowEscapeKey: false,
                                 onOpen: () => {

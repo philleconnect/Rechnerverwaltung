@@ -22,7 +22,7 @@ var servermanager = {
             }).queue(questions).then((result) => {
                 if (result.value) {
                     var output = [];
-                    for (var i = 0; i < output.length; i++) {
+                    for (var i = 0; i < data.length; i++) {
                         output.push({key:data[i].name,value:result.value[i]});
                     }
                     servermanager.environment.storeEnvironmentVariables(output, name);
@@ -37,8 +37,8 @@ var servermanager = {
                     url: "http://192.168.255.255:49100/storeenv",
                     data: {
                         apikey: apikey,
-                        key: key,
-                        value: value
+                        key: data[0].key,
+                        value: data[0].value
                     }
                 },
             }));
@@ -50,11 +50,21 @@ var servermanager = {
                 if (envStoreRequest.readyState == 4) {
                     var response = JSON.parse(JSON.parse(envStoreRequest.responseText).servermanager);
                     if (response.result == "SUCCESS") {
-                        if (data.length <= 0) {
-                            servermanager.service.updatePending(name);
-                        } else {
+                        if (data.length <= 1) {
+                            swal({
+                                title: "Das Update wird jetzt durchgeführt.",
+                                text: "Dies kann einige Minuten dauern. Bitte diese Seite nicht neu laden!",
+                                showLoaderOnConfirm: true,
+                                allowOutsideClick: false,
+                                allowEscapeKey: false,
+                                onOpen: () => {
+                                    swal.showLoading();
+                                    servermanager.service.updatePending(name);
+                                }
+                            })
+                        } else {
                             data.shift()
-                            servermanager.environment.storeEnvironmentVariables(data, callback);
+                            servermanager.environment.storeEnvironmentVariables(data, name);
                         }
                     } else {
                         swal({
@@ -195,12 +205,15 @@ var servermanager = {
         },
         update: function(name, version) {
             swal({
-                title: name + "auf Version " + version + "aktualisieren?",
+                title: "'" + name + "' auf Version " + version + " aktualisieren?",
                 text: "Durch die Aktualisierung ist dieser Service für einige Zeit nicht verfügbar. Wir empfehlen dies nur zu Zeiten durchzuführen, zu denen keiner mit dem System arbeitet. Die Aktualisierung kann einige Zeit in Anspruch nehmen. Bitte diese Seite nicht neu laden.",
                 type: "question",
                 showCancelButton: true,
                 cancelButtonText: 'Abbrechen',
                 confirmButtonText: 'Aktualisieren',
+                showLoaderOnConfirm: true,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
                 preConfirm: function() {
                     return new Promise(function(resolve) {
                         doUpdateRequest = getAjaxRequest();
@@ -247,6 +260,9 @@ var servermanager = {
                 showCancelButton: true,
                 cancelButtonText: 'Abbrechen',
                 confirmButtonText: 'Zurücksetzen',
+                showLoaderOnConfirm: true,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
                 preConfirm: function() {
                     return new Promise(function(resolve) {
 
@@ -287,6 +303,8 @@ var servermanager = {
                                 title: "Das Update wurde erfolgreich durchgeführt.",
                                 text: "Der Service " + name + " ist jetzt in der aktuellen Version installiert.",
                                 type: "success"
+                            }).then({
+                                window.reload();
                             })
                         } else {
                             swal({

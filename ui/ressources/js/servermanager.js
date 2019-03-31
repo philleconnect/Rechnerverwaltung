@@ -302,7 +302,7 @@ var servermanager = {
                                 title: "Das Update wurde erfolgreich durchgeführt.",
                                 text: "Der Service " + name + " ist jetzt in der aktuellen Version installiert.",
                                 type: "success"
-                            }).then({
+                            }).then(() => {
                                 window.location.reload();
                             })
                         } else {

@@ -303,7 +303,7 @@ var servermanager = {
                                 text: "Der Service " + name + " ist jetzt in der aktuellen Version installiert.",
                                 type: "success"
                             }).then({
-                                window.reload();
+                                window.location.reload();
                             })
                         } else {
                             swal({

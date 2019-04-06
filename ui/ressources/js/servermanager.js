@@ -324,84 +324,88 @@ var servermanager = {
             pendingCheckRequest.send(params);
             function stateChangedPendingCheck() {
                 if (pendingCheckRequest.readyState == 4) {
-                    var response = JSON.parse(JSON.parse(pendingCheckRequest.responseText).servermanager);
-                    if (servermanager.service.pending == "update") {
-                        if (response.error) {
-                            swal({
-                                title: "Es ist ein Fehler aufgetreten.",
-                                text: "Bitte versuchen Sie erneut, das Update durchzuführen.",
-                                type: "error"
-                            })
-                        } else {
-                            if (response.result == "updating") {
+                    if (pendingCheckRequest.status == 200) {
+                        var response = JSON.parse(JSON.parse(pendingCheckRequest.responseText).servermanager);
+                        if (servermanager.service.pending == "update") {
+                            if (response.error) {
+                                swal({
+                                    title: "Es ist ein Fehler aufgetreten.",
+                                    text: "Bitte versuchen Sie erneut, das Update durchzuführen.",
+                                    type: "error"
+                                })
+                            } else {
+                                if (response.result == "updating") {
+                                    setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
+                                } else if (response.result == "running") {
+                                    swal({
+                                        title: "Das Update wurde erfolgreich durchgeführt.",
+                                        text: "Der Service '" + name + "' ist jetzt in der aktuellen Version installiert.",
+                                        type: "success"
+                                    }).then(() => {
+                                        window.location.reload();
+                                    })
+                                } else {
+                                    swal({
+                                        title: "Beim Updatevorgang ist ein Fehler aufgetreten.",
+                                        text: "Die vorherige Version des Service wurde wiederhergestellt.",
+                                        type: "error"
+                                    })
+                                }
+                            }
+                        } else if (servermanager.service.pending == "revert") {
+                            if (response.result == "reverting") {
                                 setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
                             } else if (response.result == "running") {
                                 swal({
-                                    title: "Das Update wurde erfolgreich durchgeführt.",
-                                    text: "Der Service '" + name + "' ist jetzt in der aktuellen Version installiert.",
+                                    title: "Die vorherige Version wurde erfolgreich wiederhergestellt.",
                                     type: "success"
                                 }).then(() => {
                                     window.location.reload();
                                 })
-                            } else {
+                            } else {
                                 swal({
-                                    title: "Beim Updatevorgang ist ein Fehler aufgetreten.",
-                                    text: "Die vorherige Version des Service wurde wiederhergestellt.",
+                                    title: "Es ist ein Fehler aufgetreten.",
+                                    text: "Die vorherige Version von '" + name  + "' konnte nicht wiederhergestellt werden.",
+                                    type: "error"
+                                })
+                            }
+                        } else if (servermanager.service.pending == "install") {
+                            if (response.result == "installing") {
+                                setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
+                            } else if (response.result == "running") {
+                                swal({
+                                    title: "Service '" + name + "' wurde erfolgreich installiert.",
+                                    type: "success"
+                                }).then(() => {
+                                    window.location.reload();
+                                })
+                            } else {
+                                swal({
+                                    title: "Es ist ein Fehler aufgetreten.",
+                                    text: "'" + name  + "' konnte nicht installiert werden.",
+                                    type: "error"
+                                })
+                            }
+                        } else if (servermanager.service.pending == "delete") {
+                            if (response.result == "deleting") {
+                                setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
+                            } else if (response.result == "deleted") {
+                                swal({
+                                    title: "Service '" + name + "' wurde deinstalliert.",
+                                    type: "success"
+                                }).then(() => {
+                                    window.location.reload();
+                                })
+                            } else {
+                                swal({
+                                    title: "Es ist ein Fehler aufgetreten.",
+                                    text: "'" + name  + "' konnte nicht deinstalliert werden.",
                                     type: "error"
                                 })
                             }
                         }
-                    } else if (servermanager.service.pending == "revert") {
-                        if (response.result == "reverting") {
-                            setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
-                        } else if (response.result == "running") {
-                            swal({
-                                title: "Die vorherige Version wurde erfolgreich wiederhergestellt.",
-                                type: "success"
-                            }).then(() => {
-                                window.location.reload();
-                            })
-                        } else {
-                            swal({
-                                title: "Es ist ein Fehler aufgetreten.",
-                                text: "Die vorherige Version von '" + name  + "' konnte nicht wiederhergestellt werden.",
-                                type: "error"
-                            })
-                        }
-                    } else if (servermanager.service.pending == "install") {
-                        if (response.result == "installing") {
-                            setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
-                        } else if (response.result == "running") {
-                            swal({
-                                title: "Service '" + name + "' wurde erfolgreich installiert.",
-                                type: "success"
-                            }).then(() => {
-                                window.location.reload();
-                            })
-                        } else {
-                            swal({
-                                title: "Es ist ein Fehler aufgetreten.",
-                                text: "'" + name  + "' konnte nicht installiert werden.",
-                                type: "error"
-                            })
-                        }
-                    } else if (servermanager.service.pending == "delete") {
-                        if (response.result == "deleting") {
-                            setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
-                        } else if (response.result == "deleted") {
-                            swal({
-                                title: "Service '" + name + "' wurde deinstalliert.",
-                                type: "success"
-                            }).then(() => {
-                                window.location.reload();
-                            })
-                        } else {
-                            swal({
-                                title: "Es ist ein Fehler aufgetreten.",
-                                text: "'" + name  + "' konnte nicht deinstalliert werden.",
-                                type: "error"
-                            })
-                        }
+                    } else {
+                        setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
                     }
                 }
             }

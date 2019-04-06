@@ -58,7 +58,7 @@ var servermanager = {
                                 allowEscapeKey: false,
                                 onOpen: () => {
                                     swal.showLoading();
-                                    servermanager.service.updatePending(name);
+                                    servermanager.service.pendingChecker(name);
                                 }
                             })
                         } else {

@@ -49,68 +49,22 @@
                         <th>Aktion:</th>
                     </tr>
                 </thead>
-                <tbody id="tablecontent"></tbody>
+                <tbody id="plugincontent"></tbody>
             </table>
         </div>
     </div>
     <script>
-        var navigation = responsiveNav("foo", {customToggle: ".nav-toggle"});
+        var apikey = "<?php echo trim(file_get_contents('../config/apikey.txt')); ?>";
         function getAjaxRequest() {
             var ajax = null;
             ajax = new XMLHttpRequest;
             return ajax;
         }
-        var plugins;
-        function loadPlugins() {
-            preloader.toggle("LADEN");
-            request = getAjaxRequest();
-            var url = "../api/api.php";
-            var params = "request=" + encodeURIComponent(JSON.stringify({
-                servermanager: {
-                    url: "http://192.168.255.255:49100/repo",
-                    data: {
-                        apikey: "<?php echo trim(file_get_contents('../config/apikey.txt')); ?>"
-                    }
-                },
-            }));
-            request.onreadystatechange=stateChangedRepo;
-            request.open("POST",url,true);
-            request.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            request.send(params);
-            function stateChangedRepo() {
-                if (request.readyState == 4) {
-                    var response = JSON.parse(request.responseText);
-                    plugins = JSON.parse(response.servermanager);
-                    writeTable();
-                }
-            }
-        }
-        function writeTable() {
-            document.getElementById("tablecontent").innerHTML = "";
-            for (var i = 0; i < plugins.length; i++) {
-                if ((i % 2) == 0) {
-                    var style = "<tr>";
-                } else {
-                    var style = "<tr class=\"alt\">";
-                }
-                if (plugins[i].installed) {
-                    var action = "Bereits installiert.";
-                } else {
-                    var action = "<a href=\"#\" onclick=\"installService(\"" + plugins[i].name + "\")\">Installieren</a>";
-                }
-                if (plugins[i].subscription) {
-                    var license = "Benötigt SchoolConnect Abbonement.";
-                } else {
-                    var license = "Kostenlos (Open Source)";
-                }
-                document.getElementById("tablecontent").innerHTML += style + "<td>" + plugins[i].name + "</td><td>" + plugins[i].description + "</td><td>" + license + "</td><td>" + action + "</td></tr>";
-            }
-            preloader.toggle();
-        }
-        function installService(name) {
-
-        }
-        loadPlugins();
+    </script>
+    <script src="ressources/js/servermanager.js" type="text/javascript"></script>
+    <script>
+        var navigation = responsiveNav("foo", {customToggle: ".nav-toggle"});
+        servermanager.service.loadAvailable();
     </script>
 </body>
 </html>

@@ -4,6 +4,7 @@
  */
 var servermanager = {
     services: null,
+    plugins: null,
     environment: {
         getEnvironmentVariables: function(data, name) {
             var steps = [];
@@ -30,7 +31,7 @@ var servermanager = {
             })
         },
         storeEnvironmentVariables: function(data, name) {
-            envStoreRequest = getAjaxRequest();
+            var envStoreRequest = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
@@ -52,7 +53,7 @@ var servermanager = {
                     if (response.result == "SUCCESS") {
                         if (data.length <= 1) {
                             swal({
-                                title: "Das Update wird jetzt durchgeführt.",
+                                title: "Die Aktion wird jetzt durchgeführt.",
                                 text: "Dies kann einige Minuten dauern. Bitte diese Seite nicht neu laden!",
                                 allowOutsideClick: false,
                                 allowEscapeKey: false,
@@ -78,7 +79,7 @@ var servermanager = {
     },
     manager: {
         check: function() {
-            managerRequest = getAjaxRequest();
+            var managerRequest = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
@@ -104,14 +105,111 @@ var servermanager = {
             }
         },
         update: function(version) {
-
+            swal({
+                title: "ServerManager auf Version " + version + " aktualisieren?",
+                text: "Durch die Aktualisierung ist der ServerManager für einige Zeit nicht verfügbar. Wir empfehlen dies zu zu Zeiten durchzuführen, zu denen keiner mit dem System arbeitet. Während der Aktualisierung bitte diese Seite nicht neu laden.",
+                type: "question",
+                showCancelButton: true,
+                cancelButtonText: 'Abbrechen',
+                confirmButtonText: 'Aktualisieren',
+                showLoaderOnConfirm: true,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                preConfirm: function() {
+                    return new Promise(function(resolve) {
+                        var managerUpdateRequest = getAjaxRequest();
+                        var url = "../api/api.php";
+                        var params = "request=" + encodeURIComponent(JSON.stringify({
+                            servermanager: {
+                                url: "http://192.168.255.255:49100/executemanagerupdate",
+                                data: {
+                                    apikey: apikey,
+                                    version: version
+                                }
+                            },
+                        }));
+                        managerUpdateRequest.onreadystatechange = stateChangedManagerUpdateCheck;
+                        managerUpdateRequest.open("POST",url,true);
+                        managerUpdateRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                        managerUpdateRequest.send(params);
+                        function stateChangedManagerUpdateCheck() {
+                            if (managerUpdateRequest.readyState == 4) {
+                                var response = JSON.parse(JSON.parse(managerUpdateRequest.responseText).servermanager);
+                                if (response.error) {
+                                    swal({
+                                        title: "Es ist ein interner Fehler aufgetreten.",
+                                        text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'.",
+                                        type: "error"
+                                    })
+                                } else if (response.result == "running") {
+                                    servermanager.manager.pendingChecker(version);
+                                } else {
+                                    swal({
+                                        title: "Es ist ein Fehler aufgetreten.",
+                                        text: "Bitte erneut versuchen.",
+                                        type: "error"
+                                    })
+                                }
+                            }
+                        }
+                    })
+                }
+            })
+        },
+        pendingChecker: function(version) {
+            var managerPendingCheckRequest = getAjaxRequest();
+            var url = "../api/api.php";
+            var params = "request=" + encodeURIComponent(JSON.stringify({
+                servermanager: {
+                    url: "http://192.168.255.255:49100/managerupdatecheck",
+                    data: {
+                        apikey: apikey,
+                    }
+                },
+            }));
+            managerPendingCheckRequest.onreadystatechange = stateChangedManagerPendingCheck;
+            managerPendingCheckRequest.open("POST",url,true);
+            managerPendingCheckRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            managerPendingCheckRequest.send(params);
+            function stateChangedManagerPendingCheck() {
+                if (managerPendingCheckRequest.readyState == 4) {
+                    var responseContainer = JSON.parse(managerPendingCheckRequest.responseText);
+                    if (!responseContainer.servermanager) {
+                        setTimeout(function() {servermanager.manager.pendingChecker(version);}, 2000);
+                    } else {
+                        var response = JSON.parse(responseContainer.servermanager);
+                        if (response.result == version) {
+                            swal({
+                                title: "ServerManager wurde erfolgreich aktualisiert.",
+                                type: "success"
+                            }).then(() => {
+                                servermanager.manager.check();
+                            })
+                        } else if (response.error) {
+                            swal({
+                                title: "Es ist ein Fehler aufgetreten.",
+                                text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'",
+                                type: "error"
+                            })
+                        } else if (response.result) {
+                            setTimeout(function() {servermanager.manager.pendingChecker(version);}, 2000);
+                        } else {
+                            swal({
+                                title: "Es ist ein Fehler aufgetreten.",
+                                text: "Bitte erneut versuchen.",
+                                type: "error"
+                            })
+                        }
+                    }
+                }
+            }
         }
     },
     service: {
         pending: null,
         get: function() {
             preloader.toggle("LADEN");
-            request = getAjaxRequest();
+            var request = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
@@ -136,10 +234,12 @@ var servermanager = {
         run: function(name, mode) {
             if (mode) {
                 var action = "start";
+                document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: blue;\">arrow_up_round_fill</i>";
             } else {
                 var action = "stop";
+                document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: blue;\">arrow_down_round_fill</i>";
             }
-            runRequest = getAjaxRequest();
+            var runRequest = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
@@ -158,24 +258,30 @@ var servermanager = {
             function stateChangedRun() {
                 if (runRequest.readyState == 4) {
                     var response = JSON.parse(JSON.parse(runRequest.responseText).servermanager);
-                    if (response.status == "SUCCESS") {
+                    if (response.result == "running") {
+                        document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: green;\">play_round_fill</i>";
+                    } else if (response.result == "paused") {
+                        document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: red;\">close_round_fill</i>";
+                    } else if (response.error) {
                         swal({
-                            title: "Aktion erfolgreich ausgeführt.",
-                            type: "success"
-                        });
-                    } else {
-                        swal({
-                            title: "Es ist ein Fehler aufgetreten.",
-                            text: "Bitte erneut versuchen.",
+                            title: "Die Aktion konnte nicht ausgeführt werden.",
+                            text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'.",
                             type: "error"
-                        });
+                        })
+                        if (mode) {
+                            document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: red;\">close_round_fill</i>";
+                        } else {
+                            document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: green;\">play_round_fill</i>";
+                        }
+                    } else {
+                        document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: red;\">alert_fill</i>";
                     }
                     servermanager.service.get();
                 }
             }
         },
         check: function(name) {
-            updateRequest = getAjaxRequest();
+            var updateRequest = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
@@ -206,7 +312,7 @@ var servermanager = {
         update: function(name, version) {
             swal({
                 title: "'" + name + "' auf Version " + version + " aktualisieren?",
-                text: "Durch die Aktualisierung ist dieser Service für einige Zeit nicht verfügbar. Wir empfehlen dies nur zu Zeiten durchzuführen, zu denen keiner mit dem System arbeitet. Die Aktualisierung kann einige Zeit in Anspruch nehmen. Bitte diese Seite nicht neu laden.",
+                text: "Durch die Aktualisierung ist dieser Service für einige Zeit nicht verfügbar. Wir empfehlen dies zu zu Zeiten durchzuführen, zu denen keiner mit dem System arbeitet. Während der Aktualisierung bitte diese Seite nicht neu laden.",
                 type: "question",
                 showCancelButton: true,
                 cancelButtonText: 'Abbrechen',
@@ -216,7 +322,7 @@ var servermanager = {
                 allowEscapeKey: false,
                 preConfirm: function() {
                     return new Promise(function(resolve) {
-                        doUpdateRequest = getAjaxRequest();
+                        var doUpdateRequest = getAjaxRequest();
                         var url = "../api/api.php";
                         var params = "request=" + encodeURIComponent(JSON.stringify({
                             servermanager: {
@@ -228,7 +334,7 @@ var servermanager = {
                                 }
                             },
                         }));
-                        doUpdateRequest.onreadystatechange=stateChangedDoUpdateCheck;
+                        doUpdateRequest.onreadystatechange = stateChangedDoUpdateCheck;
                         doUpdateRequest.open("POST",url,true);
                         doUpdateRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
                         doUpdateRequest.send(params);
@@ -266,7 +372,7 @@ var servermanager = {
                 allowEscapeKey: false,
                 preConfirm: function() {
                     return new Promise(function(resolve) {
-                        doRevertRequest = getAjaxRequest();
+                        var doRevertRequest = getAjaxRequest();
                         var url = "../api/api.php";
                         var params = "request=" + encodeURIComponent(JSON.stringify({
                             servermanager: {
@@ -277,7 +383,7 @@ var servermanager = {
                                 }
                             },
                         }));
-                        doRevertRequest.onreadystatechange=stateChangedDoRevertCheck;
+                        doRevertRequest.onreadystatechange = stateChangedDoRevertCheck;
                         doRevertRequest.open("POST",url,true);
                         doRevertRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
                         doRevertRequest.send(params);
@@ -307,7 +413,7 @@ var servermanager = {
             })
         },
         pendingChecker: function(name) {
-            pendingCheckRequest = getAjaxRequest();
+            var pendingCheckRequest = getAjaxRequest();
             var url = "../api/api.php";
             var params = "request=" + encodeURIComponent(JSON.stringify({
                 servermanager: {
@@ -318,90 +424,100 @@ var servermanager = {
                     }
                 },
             }));
-            pendingCheckRequest.onreadystatechange=stateChangedPendingCheck;
+            pendingCheckRequest.onreadystatechange = stateChangedPendingCheck;
             pendingCheckRequest.open("POST",url,true);
             pendingCheckRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
             pendingCheckRequest.send(params);
             function stateChangedPendingCheck() {
                 if (pendingCheckRequest.readyState == 4) {
                     if (pendingCheckRequest.status == 200) {
-                        var response = JSON.parse(JSON.parse(pendingCheckRequest.responseText).servermanager);
-                        if (servermanager.service.pending == "update") {
-                            if (response.error) {
-                                swal({
-                                    title: "Es ist ein Fehler aufgetreten.",
-                                    text: "Bitte versuchen Sie erneut, das Update durchzuführen.",
-                                    type: "error"
-                                })
-                            } else {
-                                if (response.result == "updating") {
+                        if (pendingCheckRequest.responseText.includes("Datenbankfehler")) {
+                            setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
+                        } else {
+                            var response = JSON.parse(JSON.parse(pendingCheckRequest.responseText).servermanager);
+                            if (servermanager.service.pending == "update") {
+                                if (response.error) {
+                                    swal({
+                                        title: "Es ist ein Fehler aufgetreten.",
+                                        text: "Bitte versuchen Sie erneut, das Update durchzuführen.",
+                                        type: "error"
+                                    })
+                                } else {
+                                    if (response.result == "updating") {
+                                        setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
+                                    } else if (response.result == "running") {
+                                        swal({
+                                            title: "Das Update wurde erfolgreich durchgeführt.",
+                                            text: "Der Service '" + name + "' ist jetzt in der aktuellen Version installiert.",
+                                            type: "success"
+                                        }).then(() => {
+                                            servermanager.service.get();
+                                        })
+                                    } else {
+                                        swal({
+                                            title: "Beim Updatevorgang ist ein Fehler aufgetreten.",
+                                            text: "Die vorherige Version des Service wurde wiederhergestellt.",
+                                            type: "error"
+                                        })
+                                    }
+                                }
+                            } else if (servermanager.service.pending == "revert") {
+                                if (response.result == "reverting") {
                                     setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
                                 } else if (response.result == "running") {
                                     swal({
-                                        title: "Das Update wurde erfolgreich durchgeführt.",
-                                        text: "Der Service '" + name + "' ist jetzt in der aktuellen Version installiert.",
+                                        title: "Die vorherige Version wurde erfolgreich wiederhergestellt.",
                                         type: "success"
                                     }).then(() => {
-                                        window.location.reload();
+                                        servermanager.service.get();
                                     })
-                                } else {
+                                } else {
                                     swal({
-                                        title: "Beim Updatevorgang ist ein Fehler aufgetreten.",
-                                        text: "Die vorherige Version des Service wurde wiederhergestellt.",
+                                        title: "Es ist ein Fehler aufgetreten.",
+                                        text: "Die vorherige Version von '" + name  + "' konnte nicht wiederhergestellt werden.",
                                         type: "error"
                                     })
                                 }
-                            }
-                        } else if (servermanager.service.pending == "revert") {
-                            if (response.result == "reverting") {
-                                setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
-                            } else if (response.result == "running") {
-                                swal({
-                                    title: "Die vorherige Version wurde erfolgreich wiederhergestellt.",
-                                    type: "success"
-                                }).then(() => {
-                                    window.location.reload();
-                                })
-                            } else {
-                                swal({
-                                    title: "Es ist ein Fehler aufgetreten.",
-                                    text: "Die vorherige Version von '" + name  + "' konnte nicht wiederhergestellt werden.",
-                                    type: "error"
-                                })
-                            }
-                        } else if (servermanager.service.pending == "install") {
-                            if (response.result == "installing") {
-                                setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
-                            } else if (response.result == "running") {
-                                swal({
-                                    title: "Service '" + name + "' wurde erfolgreich installiert.",
-                                    type: "success"
-                                }).then(() => {
-                                    window.location.reload();
-                                })
-                            } else {
-                                swal({
-                                    title: "Es ist ein Fehler aufgetreten.",
-                                    text: "'" + name  + "' konnte nicht installiert werden.",
-                                    type: "error"
-                                })
-                            }
-                        } else if (servermanager.service.pending == "delete") {
-                            if (response.result == "deleting") {
-                                setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
-                            } else if (response.result == "deleted") {
-                                swal({
-                                    title: "Service '" + name + "' wurde deinstalliert.",
-                                    type: "success"
-                                }).then(() => {
-                                    window.location.reload();
-                                })
-                            } else {
-                                swal({
-                                    title: "Es ist ein Fehler aufgetreten.",
-                                    text: "'" + name  + "' konnte nicht deinstalliert werden.",
-                                    type: "error"
-                                })
+                            } else if (servermanager.service.pending == "install") {
+                                if (response.result == "installing") {
+                                    setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
+                                } else if (response.result == "running") {
+                                    swal({
+                                        title: "Service '" + name + "' wurde erfolgreich installiert.",
+                                        type: "success"
+                                    }).then(() => {
+                                        servermanager.service.loadAvailable();
+                                    })
+                                } else {
+                                    swal({
+                                        title: "Es ist ein Fehler aufgetreten.",
+                                        text: "'" + name  + "' konnte nicht installiert werden.",
+                                        type: "error"
+                                    })
+                                }
+                            } else if (servermanager.service.pending == "delete") {
+                                if (response.result == "deleting") {
+                                    setTimeout(function() {servermanager.service.pendingChecker(name);}, 2000);
+                                } else if (response.result == "deleted") {
+                                    swal({
+                                        title: "Service '" + name + "' wurde deinstalliert.",
+                                        type: "success"
+                                    }).then(() => {
+                                        servermanager.service.get();
+                                    })
+                                } else if (response.error) {
+                                    swal({
+                                        title: "Es ist ein Fehler aufgetreten.",
+                                        text: "'" + name  + "' konnte nicht deinstalliert werden. Der Fehlercode lautet '" + response.error + "'.",
+                                        type: "error"
+                                    })
+                                } else {
+                                    swal({
+                                        title: "Es ist ein Fehler aufgetreten.",
+                                        text: "'" + name  + "' konnte nicht deinstalliert werden.",
+                                        type: "error"
+                                    })
+                                }
                             }
                         }
                     } else {
@@ -423,11 +539,11 @@ var servermanager = {
                 allowEscapeKey: false,
                 preConfirm: function() {
                     return new Promise(function(resolve) {
-                        doInstallRequest = getAjaxRequest();
+                        var doInstallRequest = getAjaxRequest();
                         var url = "../api/api.php";
                         var params = "request=" + encodeURIComponent(JSON.stringify({
                             servermanager: {
-                                url: "http://192.168.255.255:49100/delete",
+                                url: "http://192.168.255.255:49100/install",
                                 data: {
                                     apikey: apikey,
                                     service: name
@@ -451,11 +567,7 @@ var servermanager = {
                                     servermanager.service.pending = "install";
                                     servermanager.service.pendingChecker(name);
                                 } else {
-                                    swal({
-                                        title: "Es ist ein unbekannter Fehler aufgetreten.",
-                                        text: "Bitte erneut versuchen.",
-                                        type: "error"
-                                    })
+                                    servermanager.environment.getEnvironmentVariables(response.result, name);
                                 }
                             }
                         }
@@ -488,7 +600,7 @@ var servermanager = {
                             allowEscapeKey: false,
                             preConfirm: function() {
                                 return new Promise(function(resolve) {
-                                    doDeleteRequest = getAjaxRequest();
+                                    var doDeleteRequest = getAjaxRequest();
                                     var url = "../api/api.php";
                                     var params = "request=" + encodeURIComponent(JSON.stringify({
                                         servermanager: {
@@ -530,6 +642,30 @@ var servermanager = {
                     })
                 }
             })
+        },
+        loadAvailable: function() {
+            preloader.toggle("LADEN");
+            var repoRequest = getAjaxRequest();
+            var url = "../api/api.php";
+            var params = "request=" + encodeURIComponent(JSON.stringify({
+                servermanager: {
+                    url: "http://192.168.255.255:49100/repo",
+                    data: {
+                        apikey: apikey
+                    }
+                },
+            }));
+            repoRequest.onreadystatechange = stateChangedRepo;
+            repoRequest.open("POST",url,true);
+            repoRequest.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            repoRequest.send(params);
+            function stateChangedRepo() {
+                if (repoRequest.readyState == 4) {
+                    var response = JSON.parse(repoRequest.responseText);
+                    servermanager.plugins = JSON.parse(response.servermanager);
+                    servermanager.writePluginTable();
+                }
+            }
         }
     },
     writeTable: function() {
@@ -543,7 +679,7 @@ var servermanager = {
             if (this.services[i].status == "running") {
                 var status = "<i class=\"f7-icons\" style=\"color: green;\">play_round_fill</i>";
                 var runAction = "<a href=\"#\" onclick=\"servermanager.service.run('" + this.services[i].name + "', false)\">Deaktivieren</a>";
-            } else if (this.services[i].status == "paused") {
+            } else if (this.services[i].status == "paused" || this.services[i].status == "installed") {
                 var status = "<i class=\"f7-icons\">close_round_fill</i>";
                 var runAction = "<a href=\"#\" onclick=\"servermanager.service.run('" + this.services[i].name + "', true)\">Aktivieren</a>";
             } else if (this.services[i].status == "installing" || this.services[i].status == "updating") {
@@ -551,9 +687,12 @@ var servermanager = {
                 var runAction = "";
             } else {
                 var status = "<i class=\"f7-icons\" style=\"color: red;\">close_round_fill</i>";
-                var runAction = "<a href=\"#\" onclick=\"servermanager.service.delete('" + this.services[i].name + "', true)\">Deinstallieren</a>";
+                var runAction = "";
             }
-            runAction += "";
+            if (runAction != "") {
+                runAction += "; "
+            }
+            runAction += "<a href=\"#\" onclick=\"servermanager.service.delete('" + this.services[i].name + "', true)\">Deinstallieren</a>";
             if (this.services[i].wanted) {
                 var setting = "Aktiviert";
             } else {
@@ -569,11 +708,33 @@ var servermanager = {
             } else {
                 var previous = "";
             }
-            document.getElementById("tablecontent").innerHTML += style + "<td>" + status + "</td><td>" + this.services[i].name + "</td><td>" + this.services[i].version + previous + "</td><td>" + setting + "</td><td id=\"update_" + this.services[i].name + "\">Prüfung läuft...</td><td>" + actions + "</td></tr>";
+            document.getElementById("tablecontent").innerHTML += style + "<td id=\"status_" + this.services[i].name + "\">" + status + "</td><td>" + this.services[i].name + "</td><td>" + this.services[i].version + previous + "</td><td>" + setting + "</td><td id=\"update_" + this.services[i].name + "\">Prüfung läuft...</td><td>" + actions + "</td></tr>";
             this.service.check(this.services[i].name);
         }
         renewTableSort();
         this.manager.check();
+        preloader.toggle();
+    },
+    writePluginTable: function() {
+        document.getElementById("plugincontent").innerHTML = "";
+        for (var i = 0; i < this.plugins.length; i++) {
+            if ((i % 2) == 0) {
+                var style = "<tr>";
+            } else {
+                var style = "<tr class=\"alt\">";
+            }
+            if (this.plugins[i].installed) {
+                var action = "Bereits installiert.";
+            } else {
+                var action = "<a href=\"#\" onclick=\"servermanager.service.install('" + this.plugins[i].name + "')\">Installieren</a>";
+            }
+            if (this.plugins[i].subscription) {
+                var license = "Benötigt SchoolConnect Abbonement.";
+            } else {
+                var license = "Kostenlos (Open Source)";
+            }
+            document.getElementById("plugincontent").innerHTML += style + "<td>" + this.plugins[i].name + "</td><td>" + this.plugins[i].description + "</td><td>" + license + "</td><td>" + action + "</td></tr>";
+        }
         preloader.toggle();
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /*  Backend for PhilleConnect client-programs
-    Written 2017-2018 by Johannes Kreutz.*/
+    Written 2017-2019 by Johannes Kreutz.*/
     include "api/dbconnect.php";
     //load global functions for accessing global config
     include "api/accessConfig.php";
@@ -253,6 +253,12 @@
                 }
                 $groupfolders = (object)$groupfolders;
                 $groupfolders = json_encode($groupfolders);
+                $isTeacherMachineQuery = mysqli_query($database, "SELECT teacher FROM machines WHERE hardwareid = '".mysqli_real_escape_string($database, $_POST['machine'])."'");
+                $isTeacherMachineResult = mysqli_fetch_assoc($isTeacherMachineQuery);
+                $teacher = "0";
+                if ($isTeacherMachineResult["teacher"] == 1) {
+					$teacher = "1";
+				}
                 $data = array();
                 array_push($data, array('dologin', $result['dologin']),
                     array('loginpending', $result['loginpending']),
@@ -271,7 +277,8 @@
                     array('infotext', $result['infotext']),
                     array('room', $getConfigResult['room']),
                     array('machinename', $getConfigResult['machine']),
-                    array('groupfolders', $groupfolders));
+                    array('groupfolders', $groupfolders),
+                    array('isteachermachine', $teacher));
                 if ($result['servicemode'] == '1') {
                     array_push($data, array('servicemode', 'noPasswordRequired'));
                 } else {

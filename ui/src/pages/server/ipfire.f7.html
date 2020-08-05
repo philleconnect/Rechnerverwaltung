@@ -1,0 +1,82 @@
+<template>
+  <div class="page" data-name="IPFire">
+    <p style="font-family: Arial, sans-serif; font-size: 45px;"><b>IP</b>Fire</p>
+    <br />
+    <p>Zugangsdaten für die Verbindung zur IPFire-Installation:</p>
+    <br />
+    <div class="datagrid">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 50%;">IPFire</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>URL:</td>
+            <td><input type="url" id="ipfire_url" size="40"/></td>
+          </tr>
+          <tr class="alt">
+            <td>Port:</td>
+            <td><input type="text" id="ipfire_port" size="40"/></td>
+          </tr>
+          <tr>
+            <td>Passwort:</td>
+            <td><input type="text" id="ipfire_password" size="40"/></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <button @click="save()">IPFire-Einstellungen speichern</button>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+let data = null;
+export default {
+  methods: {
+    load: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/ipfire", "GET", {}).then(function(response) {
+        preloader.toggle();
+        data = JSON.parse(response);
+        for (let [key, value] of Object.entries(data)) {
+          document.getElementById("ipfire_" + key).value = value;
+        }
+      }.bind(this));
+    },
+    save: function() {
+      Swal.fire({
+        title: 'IPFire-Einstellungen speichern?',
+        icon: "question",
+        showCancelButton: true,
+        cancelButtonText: 'Abbrechen',
+        confirmButtonText: 'Speichern',
+        showLoaderOnConfirm: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            api.send("/api/ipfire", "PUT", {url: document.getElementById("ipfire_url").value, port: document.getElementById("ipfire_port").value, password: document.getElementById("ipfire_password").value}).then(function(response) {
+              Swal.fire({
+                title: "Einstellungen erfolgreich gespeichert.",
+                icon: "success"
+              })
+              this.load();
+            }.bind(this))
+          }.bind(this))
+        }.bind(this)
+      });
+    }
+  },
+  on: {
+    pageInit: function() {
+      this.load();
+    }
+  }
+};
+</script>

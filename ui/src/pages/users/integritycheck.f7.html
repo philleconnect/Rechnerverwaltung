@@ -1,0 +1,539 @@
+<template>
+  <div class="page" data-name="Integrität prüfen">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; margin: 0;"><b>INTEGRITÄT</b>PRÜFEN</p>
+    <p>Mit dem Integritätscheck lassen sich sämtliche Zustände der Systemacounts und -gruppen überprüfen. Überprüft werden:</p>
+    <ul class="fin-list">
+      <li><i class="f7-icons icon-inline">chevron_right</i>Existenz von und Schreibrechte im Homelaufwerk</li>
+      <li><i class="f7-icons icon-inline">chevron_right</i>Zugehörigkeit zu Gruppen</li>
+      <li><i class="f7-icons icon-inline">chevron_right</i>Doppelt vorhandene Nutzer (Name, Vorname und Geburtsdatum gleich - Problem für den Jahrgangsübergang)</li>
+      <li><i class="f7-icons icon-inline">chevron_right</i>Interne Korrektheit der Accounteinträge</li>
+    </ul>
+    <p>Unstimmigkeiten werden in <span style="color:red;">rot</span> angezeigt und müssen bedarfsweise manuell behoben werden.</p>
+    <div id="integrity-last-run">
+      <p>Der letzte Integritätscheck wurde durchgeführt am: <span id="last-run-date"></<span></p>
+      <button @click="runCheck()">Neuen Check starten</button>
+    </div>
+    <div id="integrity-is-running" class="standalone-container nodisplay">
+      <i class="f7-icons standalone-icon" style="color: #1155BC;">info_circle_fill</i><p>Es wird gerade ein Integritätscheck durchgeführt...</p>
+    </div>
+    <br />
+    <div id="integrity-all-ok" class="standalone-container nodisplay">
+      <i class="f7-icons standalone-icon" style="color: green;">checkmark_circle_fill</i><h4 class="standalone-icon-headline">Es ist alles in Ordnung!</h4>
+    </div>
+    <div id="integrity-fix-all" class="standalone-container nodisplay">
+      <button @click="fixAll()">Alle Fehler beheben</button>
+    </div>
+    <div id="integrity-group-errors" class="nodisplay">
+      <h4>Gruppen</h4>
+      <div class="datagrid" style="overflow: auto;">
+        <table id="groupTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Problem</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="groups-content"></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="integrity-account-errors" class="nodisplay">
+      <h4>Accounts</h4>
+      <div class="datagrid" style="overflow: auto;">
+        <table id="userTable">
+          <thead>
+            <tr>
+              <th>Nutzername</th>
+              <th>Problem</th>
+              <th>Aktionen</th>
+            </tr>
+          </thead>
+          <tbody id="accounts-content"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
+let groupErrors = null;
+let accountErrors = null;
+let users = [];
+let groups = [];
+let userFilter = null;
+let groupFilter = null;
+let runAllErrors = 0;
+export default {
+  methods: {
+    // Data loading
+    checkStatus: function() {
+      preloader.toggle("LADEN");
+      this.showElement(false, "isRunning");
+      this.showElement(true, "lastRun");
+      this.showElement(false, "groups");
+      this.showElement(false, "accounts");
+      this.showElement(false, "fixall");
+      this.showElement(false);
+      api.send("/api/integritycheck/status", "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        if (response.status == 0) {
+          preloader.hide();
+          document.getElementById("last-run-date").innerHTML = "Kein Check durchgeführt.";
+        } else if (response.status == 1) {
+          preloader.hide();
+          this.showElement(true, "isRunning");
+          this.showElement(false, "lastRun");
+          setTimeout(function() {
+            this.checkStatus();
+          }.bind(this), 2000);
+        } else if (response.status == 2) {
+          this.loadResults();
+          let lastRun = new Date(parseInt(response.lastRun) * 1000);
+          let minutes = "0" + lastRun.getMinutes();
+          document.getElementById("last-run-date").innerHTML = lastRun.getDate() + "." + (lastRun.getMonth() + 1) + "." + lastRun.getFullYear() + " " + lastRun.getHours() + ":" + minutes.substr(-2);
+        }
+      }.bind(this))
+    },
+    runCheck: function() {
+      api.send("/api/integritycheck/run", "POST", {}).then(function(response) {
+        this.checkStatus();
+      }.bind(this))
+    },
+    loadResults: function() {
+      api.send("/api/integritycheck/results", "GET", {}).then(function(response) {
+        preloader.hide();
+        response = JSON.parse(response);
+        groupErrors = response.groups;
+        accountErrors = response.users;
+        if (Object.keys(groupErrors).length > 0) {
+          this.createGroupTable();
+          this.showElement(true, "groups");
+          this.showElement(true, "fixall");
+        }
+        if (Object.keys(accountErrors).length > 0) {
+          this.createAccountTable();
+          this.showElement(true, "accounts");
+          this.showElement(true, "fixall");
+        }
+        if (Object.keys(groupErrors).length <= 0 && Object.keys(accountErrors).length <= 0) {
+          this.showElement(true);
+        }
+        console.log(accountErrors);
+      }.bind(this))
+    },
+    loadUsers: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/users", "GET", {}).then(function(response) {
+        users = JSON.parse(response);
+        this.loadGroups();
+      }.bind(this));
+    },
+    loadGroups: function() {
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        preloader.hide();
+        groups = JSON.parse(response);
+        this.checkStatus();
+      }.bind(this));
+    },
+
+    // Data writing
+    createGroupTable: function() {
+      var tableContent = "";
+      var style = false;
+      for (const key of Object.keys(groupErrors)) {
+        tableContent += style ? "<tr class=\"alt\">" : "<tr>";
+        style = !style;
+        var errorDescription = "";
+        var actions = "";
+        if (groupErrors[key].ERR_LDAP_ENTRY_MISSING !== undefined) {
+          errorDescription += "Für diese Gruppe existiert kein LDAP-Eintrag.";
+          actions += "<a href=\"#\" data-id=\"" + key + "\" class=\"groupmissing\">Eintrag anlegen</a>";
+        }
+        if (groupErrors[key].ERR_LDAP_ENTRY_INCOMPLETE !== undefined) {
+          if (errorDescription != "") errorDescription += "<br >/";
+          if (actions != "") actions += "<br >/";
+          errorDescription += "Die Parameter dieser Gruppe im LDAP-Eintrag stimmen nicht mit der Datenbank überein.";
+          actions += "<a href=\"#\" data-id=\"" + key + "\" class=\"group-incomplete\">Fehlerhafte Parameter neu setzen</a>";
+        }
+        tableContent += "<td>" + this.getGroupName(key) + "</td><td>" + errorDescription + "</td><td>" + actions + "</td></tr>";
+      }
+      document.getElementById("groups-content").innerHTML = tableContent;
+      let classNames = ["groupmissing", "group"];
+      for (const key of classNames) {
+        for (const element of document.getElementsByClassName(key)) {
+          element.addEventListener("click", function(e) {
+            this.fix(parseInt(e.target.dataset.id), key);
+          }.bind(this));
+        }
+      }
+      this.loadGroupSearch();
+    },
+    createAccountTable: function() {
+      var tableContent = "";
+      var style = false;
+      for (const key of Object.keys(accountErrors)) {
+        tableContent += style ? "<tr class=\"alt\">" : "<tr>";
+        style = !style;
+        var errorDescription = "";
+        var actions = "";
+        if (accountErrors[key].ERR_LDAP_ENTRY_MISSING !== undefined) {
+          errorDescription += "Für diesen Account existiert kein LDAP-Eintrag.";
+          actions += "<a href=\"#\" data-id=\"" + key + "\" class=\"accountmissing\">Eintrag anlegen</a>";
+        }
+        if (accountErrors[key].ERR_LDAP_ENTRY_INCOMPLETE !== undefined) {
+          if (errorDescription != "") errorDescription += "<br >";
+          if (actions != "") actions += "<br >";
+          errorDescription += "Die Parameter dieses Accounts im LDAP-Eintrag stimmt nicht mit der Datenbank überein.";
+          actions += "<a href=\"#\" data-id=\"" + key + "\" class=\"account\">Fehlerhafte Parameter neu setzen</a>";
+        }
+        if (accountErrors[key].ERR_LDAP_GROUP_MEMBERSHIP !== undefined) {
+          if (errorDescription != "") errorDescription += "<br >";
+          if (actions != "") actions += "<br >";
+          var missingMemberships = "";
+          for (const group of accountErrors[key].ERR_LDAP_GROUP_MEMBERSHIP) {
+            if (missingMemberships != "") missingMemberships += ", ";
+            missingMemberships += group;
+          }
+          errorDescription += "Die Mitgliedschaft für die Gruppen \"" + missingMemberships + "\" ist nicht im LDAP-Eintrag hinterlegt.";
+          actions += "<a href=\"#\" data-id=\"" + key + "\" class=\"membership\">Mitgliedschaften neu eintragen</a>";
+        }
+        if (accountErrors[key].ERR_HOMEFOLDER_MISSING !== undefined) {
+          if (errorDescription != "") errorDescription += "<br >";
+          if (actions != "") actions += "<br >";
+          errorDescription += "Für diesen Account existiert kein Homelaufwerk.";
+          actions += "<a href=\"#\" data-id=\"" + key + "\" class=\"foldermissing\">Homelaufwerk anlegen</a>";
+        }
+        if (accountErrors[key].ERR_HOMEFOLDER_PERMISSIONS !== undefined) {
+          if (errorDescription != "") errorDescription += "<br >";
+          if (actions != "") actions += "<br >";
+          errorDescription += "Die Zugriffsrechte für das Homelaufwerk sind nicht korrekt.";
+          actions += "<a href=\"#\" data-id=\"" + key + "\" class=\"folder\">Zugriffsrechte reparieren</a>";
+        }
+        tableContent += "<td>" + this.getUsername(key) + "</td><td>" + errorDescription + "</td><td>" + actions + "</td></tr>";
+      }
+      document.getElementById("accounts-content").innerHTML = tableContent;
+      let classNames = ["account", "membership", "foldermissing", "folder"];
+      for (const key of classNames) {
+        for (const element of document.getElementsByClassName(key)) {
+          element.addEventListener("click", function(e) {
+            this.fix(e.target.dataset.id, key);
+          }.bind(this));
+        }
+      }
+      this.loadUserSearch();
+    },
+
+    // UI management
+    showElement: function(mode, element) {
+      var id;
+      switch (element) {
+        case "lastRun":
+          id = "integrity-last-run";
+          break;
+        case "isRunning":
+          id = "integrity-is-running";
+          break;
+        case "groups":
+          id = "integrity-group-errors";
+          break;
+        case "accounts":
+          id = "integrity-account-errors";
+          break;
+        case "fixall":
+          id = "integrity-fix-all";
+          break;
+        default:
+          id = "integrity-all-ok";
+      }
+      if (mode) {
+        document.getElementById(id).classList.remove("nodisplay");
+      } else {
+        document.getElementById(id).classList.add("nodisplay");
+      }
+    },
+
+    // Helpers
+    getUsername: function(id) {
+      for (const user of users) {
+        if (user.id == id) {
+          return user.username;
+        }
+      }
+      return "";
+    },
+    getGroupName: function(id) {
+      for (const group of groups) {
+        if (group.id == id) {
+          return group.name;
+        }
+      }
+      return "";
+    },
+
+    // Data searching
+    loadGroupSearch: function() {
+      if (groupFilter != null) {
+        groupFilter.disable();
+      }
+      groupFilter = new tableSearch("groupTable", {
+        col_1: "none",
+        col_2: "none",
+      });
+    },
+    loadUserSearch: function() {
+      if (userFilter != null) {
+        userFilter.disable();
+      }
+      userFilter = new tableSearch("userTable", {
+        col_1: "none",
+        col_2: "none",
+      });
+    },
+
+    // Fix errors
+    fix: function(id, error) {
+      Swal.fire({
+        title: "Fehler werden behoben...",
+        allowEscapeKey: false,
+        allowOutsideClick: false,
+        onBeforeOpen: () => {
+          Swal.showLoading();
+          switch (error) {
+            case "group":
+              api.send("/api/integritycheck/fix/group/" + id, "POST", {}).then(this.fixCallback.bind(this));
+              break;
+            case "groupmissing":
+              api.send("/api/integritycheck/fix/group/" + id, "POST", {missing: true}).then(this.fixCallback.bind(this));
+              break;
+            case "account":
+              api.send("/api/integritycheck/fix/user/" + id, "POST", {}).then(this.fixCallback.bind(this));
+              break;
+            case "accountmissing":
+              api.send("/api/integritycheck/fix/user/" + id, "POST", {missing: true}).then(this.fixCallback.bind(this));
+              break;
+            case "folder":
+              api.send("/api/integritycheck/fix/folder/" + id, "POST", {}).then(this.fixCallback.bind(this));
+              break;
+            case "foldermissing":
+              api.send("/api/integritycheck/fix/folder/" + id, "POST", {missing:true}).then(this.fixCallback.bind(this));
+              break;
+            case "membership":
+              api.send("/api/integritycheck/fix/membership/" + id, "POST", {targets: JSON.stringify(accountErrors[id].ERR_LDAP_GROUP_MEMBERSHIP)}).then(this.fixCallback.bind(this));
+              break;
+          }
+        }
+      })
+    },
+    fixCallback: function(response) {
+      if (response == "SUCCESS") {
+        Swal.fire({
+          title: "Fehler erfolgreich behoben.",
+          icon: "success",
+        }).then(function() {
+          this.checkStatus();
+        }.bind(this))
+      } else if (response == "ERR_ALL_DONE") {
+        Swal.fire({
+          title: "Es wurden keine Fehler gefunden.",
+          icon: "success",
+        }).then(function() {
+          this.checkStatus();
+        }.bind(this))
+      }
+    },
+    fixAll: function() {
+      Swal.fire({
+        title: "Alle Probleme beheben?",
+        icon: "question",
+        allowEscapeKey: false,
+        allowOutsideClick: false,
+        showCancelButton: true,
+        confirmButtonText: 'Probleme beheben',
+        cancelButtonText: 'Abbrechen',
+        confirmButtonColor: '#D33',
+        cancelButtonColor: "#3085d6",
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            Swal.mixin({
+              confirmButtonText: '',
+              showCancelButton: false,
+              allowEscapeKey: false,
+              allowOutsideClick: false,
+              icon: "info",
+              progressSteps: ['1', '2'],
+              html: "<span id=\"popup-text\"></span>"
+            }).queue([
+              "Gruppenprobleme beheben",
+              "Accountprobleme beheben",
+            ])
+            setTimeout(function() {
+              runAllErrors = 0;
+              this.fixAllRunnerGroups();
+            }.bind(this), 50);
+          }.bind(this))
+        }.bind(this)
+      })
+    },
+    fixAllRunnerGroups: function() {
+      Swal.showLoading();
+      var groupErrorsFixed = 0;
+      var taskRunning = false;
+      if (groupErrors != null) {
+        var errorsToFix = 0;
+        for (const id in groupErrors) {
+          for (const error in groupErrors[id]) {
+            errorsToFix++;
+          }
+        }
+        document.getElementById("popup-text").innerHTML = "0 von " + errorsToFix;
+        for (const id in groupErrors) {
+          for (const error in groupErrors[id]) {
+            taskRunning = true;
+            switch(error) {
+              case "ERR_LDAP_ENTRY_INCOMPLETE":
+                api.send("/api/integritycheck/fix/group/" + id, "POST", {}, true).then(function(response) {
+                  if (response.status != 200) {
+                    runAllErrors++;
+                  }
+                  groupErrorsFixed++;
+                  document.getElementById("popup-text").innerHTML = groupErrorsFixed + " von " + errorsToFix;
+                  if (groupErrorsFixed == errorsToFix) {
+                    this.fixAllRunnerAccounts();
+                  }
+                }.bind(this));
+                break;
+              case "ERR_LDAP_ENTRY_MISSING":
+                api.send("/api/integritycheck/fix/group/" + id, "POST", {missing: true}, true).then(function(response) {
+                  if (response.status != 200) {
+                    runAllErrors++;
+                  }
+                  groupErrorsFixed++;
+                  document.getElementById("popup-text").innerHTML = groupErrorsFixed + " von " + errorsToFix;
+                  if (groupErrorsFixed == errorsToFix) {
+                    this.fixAllRunnerAccounts();
+                  }
+                }.bind(this));
+                break;
+            }
+          }
+        }
+      }
+      if (!taskRunning) this.fixAllRunnerAccounts();
+    },
+    fixAllRunnerAccounts: function() {
+      Swal.hideLoading();
+      Swal.clickConfirm();
+      setTimeout(function() {
+        Swal.showLoading();
+      }, 50);
+      var accountErrorsFixed = 0;
+      var taskRunning = false;
+      if (accountErrors != null) {
+        var errorsToFix = 0;
+        for (const id in accountErrors) {
+          for (const error in accountErrors[id]) {
+            errorsToFix++;
+          }
+        }
+        document.getElementById("popup-text").innerHTML = "0 von " + errorsToFix;
+        for (const id in accountErrors) {
+          taskRunning = true;
+          for (const error in accountErrors[id]) {
+            switch(error) {
+              case "ERR_LDAP_ENTRY_INCOMPLETE":
+                api.send("/api/integritycheck/fix/user/" + id, "POST", {}, true).then(function(response) {
+                  if (response.status != 200) {
+                    runAllErrors++;
+                  }
+                  accountErrorsFixed++;
+                  document.getElementById("popup-text").innerHTML = accountErrorsFixed + " von " + errorsToFix;
+                  if (accountErrorsFixed == errorsToFix) {
+                    this.fixAllRunnerFinish();
+                  }
+                }.bind(this));
+                break;
+              case "ERR_LDAP_ENTRY_MISSING":
+                api.send("/api/integritycheck/fix/user/" + id, "POST", {missing: true}, true).then(function(response) {
+                  if (response.status != 200) {
+                    runAllErrors++;
+                  }
+                  accountErrorsFixed++;
+                  document.getElementById("popup-text").innerHTML = accountErrorsFixed + " von " + errorsToFix;
+                  if (accountErrorsFixed == errorsToFix) {
+                    this.fixAllRunnerFinish();
+                  }
+                }.bind(this));
+                break;
+              case "ERR_HOMEFOLDER_PERMISSIONS":
+                api.send("/api/integritycheck/fix/folder/" + id, "POST", {}, true).then(function(response) {
+                  if (response.status != 200) {
+                    runAllErrors++;
+                  }
+                  accountErrorsFixed++;
+                  document.getElementById("popup-text").innerHTML = accountErrorsFixed + " von " + errorsToFix;
+                  if (accountErrorsFixed == errorsToFix) {
+                    this.fixAllRunnerFinish();
+                  }
+                }.bind(this));
+                break;
+              case "ERR_HOMEFOLDER_MISSING":
+                api.send("/api/integritycheck/fix/folder/" + id, "POST", {missing:true}, true).then(function(response) {
+                  if (response.status != 200) {
+                    runAllErrors++;
+                  }
+                  accountErrorsFixed++;
+                  document.getElementById("popup-text").innerHTML = accountErrorsFixed + " von " + errorsToFix;
+                  if (accountErrorsFixed == errorsToFix) {
+                    this.fixAllRunnerFinish();
+                  }
+                }.bind(this));
+                break;
+              case "ERR_LDAP_GROUP_MEMBERSHIP":
+                api.send("/api/integritycheck/fix/membership/" + id, "POST", {targets: JSON.stringify(accountErrors[id].ERR_LDAP_GROUP_MEMBERSHIP)}, true).then(function(response) {
+                  if (response.status != 200) {
+                    runAllErrors++;
+                  }
+                  accountErrorsFixed++;
+                  document.getElementById("popup-text").innerHTML = accountErrorsFixed + " von " + errorsToFix;
+                  if (accountErrorsFixed == errorsToFix) {
+                    this.fixAllRunnerFinish();
+                  }
+                }.bind(this));
+                break;
+            }
+          }
+        }
+      }
+      if (!taskRunning) this.fixAllRunnerFinish();
+    },
+    fixAllRunnerFinish: function() {
+      Swal.fire({
+        title: "Alle Probleme behoben.",
+        icon: "success"
+      }).then(function() {
+        this.runCheck();
+      }.bind(this));
+      setTimeout(function() {
+        Swal.hideLoading();
+      }, 50);
+    }
+  },
+  on: {
+    pageInit: function() {
+      this.loadUsers();
+      groupErrors = null;
+      accountErrors = null;
+      users = [];
+      groups = [];
+      userFilter = null;
+      groupFilter = null;
+      runAllErrors = 0;
+    }
+  }
+};
+</script>

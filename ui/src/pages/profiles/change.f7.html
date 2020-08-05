@@ -1,0 +1,266 @@
+<template>
+  <div class="page" data-name="Konfigurationsprofile">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>KONFIGURATIONSPROFIL</b>BEARBEITEN</p>
+    <h3>Profildaten. Änderungen müssen mittels "Speichern" übernommen werden.</h3>
+    <div class="input-group">
+      <input type="text" id="name" required/>
+      <span class="input-bar"></span>
+      <label>Name</label>
+    </div>
+    <br />
+    <div class="input-group">
+      <textarea id="comment" required></textarea>
+      <span class="input-bar"></span>
+      <label>Infotext</label>
+    </div>
+    <br />
+    <button @click="load()">Zurücksetzen</button>
+    <button @click="save()">Änderungen speichern</button>
+    <h3>Gruppen und Gruppenlaufwerke. Änderungen werden sofort gespeichert.</h3>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <p>Gruppen von <span class="profile-name"></span></p>
+        <div class="datagrid">
+          <table>
+            <thead>
+              <tr>
+                <th>Gruppe</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="groups-chosen"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="two-col-two">
+        <p>Verfügbare Gruppen</p>
+        <div class="datagrid">
+          <table>
+            <thead>
+              <tr>
+                <th>Gruppe</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="groups-available"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <p>Gruppenlaufwerke von <span class="profile-name"></span></p>
+        <div class="datagrid">
+          <table>
+            <thead>
+              <tr>
+                <th>Gruppe</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="shares-chosen"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="two-col-two">
+        <p>Verfügbare Gruppenlaufwerke</p>
+        <div class="datagrid">
+          <table>
+            <thead>
+              <tr>
+                <th>Gruppe</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="shares-available"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+let groups = [];
+let shares = [];
+let profile = null;
+export default {
+  methods: {
+    // Data loading
+    load: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/profile/" + this.$route.params.id, "GET", {}).then(function(response) {
+        preloader.toggle();
+        response = JSON.parse(response);
+        profile = response;
+        this.loadGroups();
+        this.loadShares();
+        for (const element of document.getElementsByClassName("profile-name")) {
+          element.innerHTML = profile.name;
+        }
+        document.getElementById("name").value = profile.name;
+        document.getElementById("comment").value = profile.comment;
+      }.bind(this));
+    },
+    loadGroups: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        preloader.toggle();
+        groups = JSON.parse(response);
+        this.createGroupTable();
+      }.bind(this));
+    },
+    loadShares: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/shares", "GET", {}).then(function(response) {
+        preloader.toggle();
+        shares = JSON.parse(response);
+        this.createShareTable();
+      }.bind(this));
+    },
+
+    // Data printing
+    createGroupTable: function() {
+      let selectedTable = "";
+      let availableTable = "";
+      let style = false;
+      for (const id of profile.groups) {
+        if (style) {
+          selectedTable += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          selectedTable += "<tr>";
+          style = true;
+        }
+        selectedTable += "<td>" + this.getDetails(id, "name", groups) + "</td><td><a href=\"#\" data-id=\"" + id + "\" class=\"delete-group\"><i class=\"f7-icons icon-default\">multiply_circle_fill</i></a></td></tr>";
+      }
+      style = false;
+      for (const group of groups) {
+        if (profile.groups.indexOf(group["id"]) < 0) {
+          if (style) {
+            availableTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            availableTable += "<tr>";
+            style = true;
+          }
+          availableTable += "<td>" + group["name"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-group\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+        }
+      }
+      document.getElementById("groups-chosen").innerHTML = (selectedTable != "") ? selectedTable : "Keine Gruppe gewählt.";
+      document.getElementById("groups-available").innerHTML = (availableTable != "") ? availableTable : "Keine Gruppe verfügbar.";
+      for (const element of document.getElementsByClassName("add-group")) {
+        element.addEventListener("click", function(e) {
+          this.addGroup(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-group")) {
+        element.addEventListener("click", function(e) {
+          this.deleteGroup(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+    },
+    createShareTable: function() {
+      let selectedTable = "";
+      let availableTable = "";
+      let style = false;
+      for (const id of profile.shares) {
+        if (style) {
+          selectedTable += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          selectedTable += "<tr>";
+          style = true;
+        }
+        selectedTable += "<td>" + this.getDetails(id, "name", shares) + "</td><td><a href=\"#\" data-id=\"" + id + "\" class=\"delete-share\"><i class=\"f7-icons icon-default\">multiply_circle_fill</i></a></td></tr>";
+      }
+      style = false;
+      for (const group of shares) {
+        if (profile.shares.indexOf(group["id"]) < 0) {
+          if (style) {
+            availableTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            availableTable += "<tr>";
+            style = true;
+          }
+          availableTable += "<td>" + group["name"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-share\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+        }
+      }
+      document.getElementById("shares-chosen").innerHTML = (selectedTable != "") ? selectedTable : "Kein Gruppenlaufwerk gewählt.";
+      document.getElementById("shares-available").innerHTML = (availableTable != "") ? availableTable : "Kein Gruppenlaufwerk verfügbar.";
+      for (const element of document.getElementsByClassName("add-share")) {
+        element.addEventListener("click", function(e) {
+          this.addShare(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-share")) {
+        element.addEventListener("click", function(e) {
+          this.deleteShare(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+    },
+
+    // Group functions
+    addGroup: function(id) {
+      api.send("/api/profile/" + this.$route.params.id + "/group/" + id, "POST", {}).then(function(response) {
+        this.load();
+      }.bind(this));
+    },
+    deleteGroup: function(id) {
+      api.send("/api/profile/" + this.$route.params.id + "/group/" + id, "DELETE", {}).then(function(response) {
+        this.load();
+      }.bind(this));
+    },
+
+    // Share functions
+    addShare: function(id) {
+      api.send("/api/profile/" + this.$route.params.id + "/share/" + id, "POST", {}).then(function(response) {
+        this.load();
+      }.bind(this));
+    },
+    deleteShare: function(id) {
+      api.send("/api/profile/" + this.$route.params.id + "/share/" + id, "DELETE", {}).then(function(response) {
+        this.load();
+      }.bind(this));
+    },
+
+    // Data saving
+    save: function() {
+      let profile = {
+        name: document.getElementById("name").value,
+        comment: document.getElementById("comment").value,
+        networklockDefault: profile.networklockDefault
+      }
+      api.send("/api/profile/" + this.$route.params.id, "PUT", profile).then(function(response) {
+        Swal.fire({
+          title: "Änderungen erfolgreich gespeichert.",
+          icon: "success",
+        }).then(function() {
+          window.app.views.main.router.navigate("/profiles");
+        })
+      }.bind(this))
+    },
+
+    // Helpers
+    getDetails: function(id, type, array) {
+      for (const element of array) {
+        if (element["id"] == id) {
+         return element[type];
+        }
+      }
+      return "";
+    },
+  },
+  on: {
+    pageInit: function() {
+      this.load();
+      this.loadGroups();
+      this.loadShares();
+    }
+  }
+};
+</script>

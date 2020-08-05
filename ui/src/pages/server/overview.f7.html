@@ -1,0 +1,405 @@
+<template>
+  <div class="page" data-name="Server">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>SERVER</b>MANAGEMENT</p>
+    <p id="servermanager_version">ServerManager-Version: Laden...</p>
+    <p>Grundfunktionen:</p>
+    <div class="datagrid">
+      <table id="services">
+        <thead>
+          <tr>
+            <th>Status:</th>
+            <th>Name:</th>
+            <th>Version:</th>
+            <th>Einstellung:</th>
+            <th>Aktualisierung:</th>
+            <th>Aktionen:</th>
+          </tr>
+        </thead>
+        <tbody id="tablecontent"></tbody>
+      </table>
+    </div>
+    <p>Installierte Plugins:</p>
+    <div class="datagrid">
+      <table id="services">
+        <thead>
+          <tr>
+            <th>Status:</th>
+            <th>Name:</th>
+            <th>Version:</th>
+            <th>Einstellung:</th>
+            <th>Aktualisierung:</th>
+            <th>Aktionen:</th>
+          </tr>
+        </thead>
+        <tbody id="plugincontent"></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+let pending = null;
+let services = [];
+export default {
+  methods: {
+    // Data loading
+    get: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/servermanager", "POST", {url: "/status"}).then(function(response) {
+        services = JSON.parse(response);
+        this.writeTable();
+      }.bind(this));
+    },
+
+    // Data writing
+    writeTable: function() {
+      var tableContent = "";
+      var pluginContent = "";
+      var tableStyle = false;
+      var pluginStyle = false;
+      for (const service of services) {
+        if (service.status == "running") {
+          var status = "<i class=\"f7-icons\" style=\"color: green;\">play_circle_fill</i>";
+          var runAction = "<a href=\"#\" data-name=\"" + service.name + "\" class=\"stop-service\"><i class=\"f7-icons\">arrow_down</i></a>";
+        } else if (service.status == "paused" || service.status == "installed") {
+          var status = "<i class=\"f7-icons\">multiply_circle_fill</i>";
+          var runAction = "<a href=\"#\" data-name=\"" + service.name + "\" class=\"start-service\"><i class=\"f7-icons\">arrow_up</i></a>";
+        } else if (service.status == "installing" || service.status == "updating") {
+          var status = "<i class=\"f7-icons\" style=\"color: blue;\">arrow_2_circlepath_circle_fill</i>";
+          var runAction = "";
+        } else {
+          var status = "<i class=\"f7-icons\" style=\"color: red;\">xmark_circle_fill</i>";
+          var runAction = "";
+        }
+        runAction += "<a href=\"#\" data-name=\"" + service.name + "\" class=\"delete-service\"><i class=\"f7-icons\">trash_fill</i></a>";
+        if (service.wanted) {
+          var setting = "Aktiviert";
+        } else {
+          var setting = "Deaktiviert";
+        }
+        if (service.previous != "") {
+          var previous = "<br /><a href=\"#\" data-name=\"" + service.name + "\" class=\"revert-service\">Zurück zu " + service.previous + "</a>";
+        } else {
+          var previous = "";
+        }
+        if (service.type == "essential") {
+          let style = tableStyle ? "<tr class=\"alt\">" : "<tr>";
+          tableStyle = !tableStyle;
+          tableContent += style + "<td id=\"status_" + service.name + "\">" + status + "</td><td>" + service.name + "</td><td>" + service.version + previous + "</td><td>" + setting + "</td><td id=\"update_" + service.name + "\">Prüfung läuft...</td><td></td></tr>";
+        } else {
+          let style = pluginStyle ? "<tr class=\"alt\">" : "<tr>";
+          pluginStyle = !pluginStyle;
+          pluginContent += style + "<td id=\"status_" + service.name + "\">" + status + "</td><td>" + service.name + "</td><td>" + service.version + previous + "</td><td>" + setting + "</td><td id=\"update_" + service.name + "\">Prüfung läuft...</td><td>" + runAction + "</td></tr>";
+        }
+      }
+      for (const service of services) {
+        this.checkService(service.name);
+      }
+      document.getElementById("tablecontent").innerHTML = tableContent;
+      document.getElementById("plugincontent").innerHTML = pluginContent != "" ? pluginContent : "Keine Plugins installiert.";
+      for (const element of document.getElementsByClassName("start-service")) {
+        element.addEventListener("click", function(e) {
+          this.runService(e.target.parentElement.dataset.name, true);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("stop-service")) {
+        element.addEventListener("click", function(e) {
+          this.runService(e.target.parentElement.dataset.name, false);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-service")) {
+        element.addEventListener("click", function(e) {
+          this.deleteService(e.target.parentElement.dataset.name);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("revert-service")) {
+        element.addEventListener("click", function(e) {
+          this.revertService(e.target.dataset.name);
+        }.bind(this));
+      }
+      this.checkManager();
+      preloader.toggle();
+    },
+
+    // Service functions
+    checkService: function(name) {
+      api.send("/api/servermanager", "POST", {url: "/updatecheck", data: JSON.stringify({service: name})}).then(function(response) {
+        response = JSON.parse(response);
+        if (response.error) {
+          document.getElementById("update_" + name).innerHTML = "Fehler.";
+        } else if (response.actualVersion == response.latestPossible) {
+          document.getElementById("update_" + name).innerHTML = "Aktuell: " + response.actualVersion;
+        } else {
+          document.getElementById("update_" + name).innerHTML = "<a href=\"#\" onclick=\"window.app.views.main.router.navigate('/server/plugins/update/" + name + "/" + response.latestPossible + "')\">Auf " + response.latestPossible + " aktualisieren.</a>";
+        }
+      }.bind(this));
+    },
+    runService: function(name, mode) {
+      if (document.getElementById("status_" + name)) {
+        if (mode) {
+          var action = "start";
+          document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: blue;\">arrow_up_circle_fill</i>";
+        } else {
+          var action = "stop";
+          document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: blue;\">arrow_down_circle_fill</i>";
+        }
+      }
+      api.send("/api/servermanager", "POST", {url: "/control", data: JSON.stringify({service: name, action: action})}).then(function(response) {
+        response = JSON.parse(response);
+        if (response.result == "running") {
+          document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: green;\">play_circle_fill</i>";
+        } else if (response.result == "paused") {
+          document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: red;\">multiply_circle_fill</i>";
+        } else if (response.error) {
+          Swal.fire({
+            title: "Die Aktion konnte nicht ausgeführt werden.",
+            text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'.",
+            icon: "error"
+          })
+          if (mode) {
+            document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: red;\">multiply_circle_fill</i>";
+          } else {
+            document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: green;\">play_circle_fill</i>";
+          }
+        } else {
+          document.getElementById("status_" + name).innerHTML = "<i class=\"f7-icons\" style=\"color: red;\">exclamationmark_triangle_fill</i>";
+        }
+        this.get();
+      }.bind(this));
+    },
+    deleteService: function(name) {
+      Swal.fire({
+        title: "Service '" + name + "' wirklich deinstallieren?",
+        text: "WARNUNG! WARNUNG! WARNUNG! Alle Einstellungen von '" + name + "' werden ebenfalls gelöscht. Alle auf '" + name + "' aufbauende Funktionen werden nicht mehr zur Verfügung stehen.",
+        icon: "warning",
+        showCancelButton: true,
+        cancelButtonText: 'Abbrechen',
+        confirmButtonText: 'Löschen',
+        showLoaderOnConfirm: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            Swal.fire({
+              title: "Ich frage nochmal zur Sicherheit.",
+              text: "WARNUNG! WARNUNG! WARNUNG! Alle Einstellungen von '" + name + "' werden ebenfalls gelöscht. Alle auf '" + name + "' aufbauende Funktionen werden nicht mehr zur Verfügung stehen.",
+              icon: "warning",
+              showCancelButton: true,
+              cancelButtonText: 'Abbrechen',
+              confirmButtonText: 'Löschen',
+              showLoaderOnConfirm: true,
+              allowOutsideClick: false,
+              allowEscapeKey: false,
+              preConfirm: function() {
+                return new Promise(function(resolve) {
+                  api.send("/api/servermanager", "POST", {url: "/delete", data: JSON.stringify({service: name})}).then(function(response) {
+                    response = JSON.parse(response);
+                    if (response.error) {
+                      Swal.fire({
+                        title: "Es ist ein interner Fehler aufgetreten.",
+                        text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'.",
+                        icon: "error"
+                      })
+                    } else if (response.result == "running") {
+                      this.deletePendingChecker(name);
+                    } else {
+                      Swal.fire({
+                        title: "Es ist ein unbekannter Fehler aufgetreten.",
+                        text: "Bitte erneut versuchen.",
+                        icon: "error"
+                      })
+                    }
+                  }.bind(this));
+                }.bind(this))
+              }.bind(this)
+            })
+          }.bind(this))
+        }.bind(this)
+      })
+    },
+    deletePendingChecker: function(name) {
+      api.send("/api/servermanager", "POST", {url: "/actionstatus", data: JSON.stringify({service: name})}).then(function(response) {
+        response = JSON.parse(response);
+        if (response.result == "deleting") {
+          setTimeout(function() {this.deletePendingChecker(name);}.bind(this), 2000);
+        } else if (response.result == "deleted") {
+          Swal.fire({
+            title: "Service '" + name + "' wurde deinstalliert.",
+            icon: "success"
+          }).then(function() {
+            this.get();
+          }.bind(this))
+        } else if (response.error) {
+          Swal.fire({
+            title: "Es ist ein Fehler aufgetreten.",
+            text: "'" + name  + "' konnte nicht deinstalliert werden. Der Fehlercode lautet '" + response.error + "'.",
+            icon: "error"
+          })
+        } else {
+          Swal.fire({
+            title: "Es ist ein Fehler aufgetreten.",
+            text: "'" + name  + "' konnte nicht deinstalliert werden.",
+            icon: "error"
+          })
+        }
+      }.bind(this))
+    },
+    revertService: function(name) {
+      Swal.fire({
+        title: "WARNUNG! Service wirklich auf vorherige Version zurücksetzen?",
+        text: "Durch das Zurücksetzen auf die vorherige Version kann es zu Inkompatibilitäten mit bereits erzeugten Daten kommen. Wir empfehlen, diese Funktion ausschließlich direkt nach fehlgeschlagenen Aktualisierungen zu nutzen!",
+        icon: "warning",
+        showCancelButton: true,
+        cancelButtonText: 'Abbrechen',
+        confirmButtonText: 'Zurücksetzen',
+        showLoaderOnConfirm: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            api.send("/api/servermanager", "POST", {url: "/executerevert", data: JSON.stringify({service: name})}).then(function(response) {
+              response = JSON.parse(response);
+              if (response.error) {
+                Swal.fire({
+                  title: "Es ist ein interner Fehler aufgetreten.",
+                  text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'.",
+                  type: "error"
+                })
+              } else if (response.result == "running") {
+                this.revertPendingChecker(name);
+              } else {
+                Swal.fire({
+                  title: "Es ist ein unbekannter Fehler aufgetreten.",
+                  text: "Bitte erneut versuchen.",
+                  type: "error"
+                })
+              }
+            }.bind(this));
+          }.bind(this))
+        }.bind(this)
+      })
+    },
+    revertPendingChecker: function() {
+      api.send("/api/servermanager", "POST", {url: "/actionstatus", data: JSON.stringify({service: this.$route.params.name})}, true).then(function(response) {
+        if (response.status != 200) {
+          setTimeout(function() {this.pendingChecker();}.bind(this), 2000);
+        } else {
+          response = JSON.parse(response.responseText);
+          if (response.result == "reverting") {
+            setTimeout(function() {this.pendingChecker();}.bind(this), 2000);
+          } else if (response.result == "running") {
+            Swal.fire({
+              title: "Service '" + this.$route.params.name + "' wurde erfolgreich auf die vorherige Version zurückgesetzt.",
+              icon: "success"
+            }).then(function() {
+              window.app.views.main.router.navigate("/server");
+            })
+          } else if (response.result == "paused") {
+            Swal.fire({
+              title: "Service '" + this.$route.params.name + "' wurde erfolgreich auf die vorherige Version zurückgesetzt.",
+              icon: "success"
+            }).then(() => {
+              window.app.views.main.router.navigate("/server");
+            })
+          } else {
+            Swal.fire({
+              title: "Es ist ein Fehler aufgetreten.",
+              text: "'" + this.$route.params.name  + "' konnte nicht auf die vorherige Version zurückgesetzt werden.",
+              icon: "error"
+            })
+          }
+        }
+      }.bind(this))
+    },
+
+    // Manager functions
+    checkManager: function() {
+      api.send("/api/servermanager", "POST", {url: "/manager"}).then(function(response) {
+        response = JSON.parse(response);
+        if (response.available) {
+          document.getElementById("servermanager_version").innerHTML = "ServerManager-Version: " + response.actual + ". <a href=\"#\" data-version=\"" + response.available + "\" id=\"servermanager-update\">Auf Version " + response.available + " aktualisieren.</a>";
+        } else {
+          document.getElementById("servermanager_version").innerHTML = "ServerManager-Version: " + response.actual + ".";
+        }
+        document.getElementById("servermanager-update").addEventListener("click", function(e) {
+          this.updateManager(e.target.dataset.version);
+        }.bind(this));
+      }.bind(this));
+    },
+    updateManager: function(version) {
+      Swal.fire({
+        title: "ServerManager auf Version " + version + " aktualisieren?",
+        text: "Durch die Aktualisierung ist der ServerManager für einige Zeit nicht verfügbar. Wir empfehlen dies zu zu Zeiten durchzuführen, zu denen keiner mit dem System arbeitet. Während der Aktualisierung bitte diese Seite nicht neu laden.",
+        icon: "question",
+        showCancelButton: true,
+        cancelButtonText: 'Abbrechen',
+        confirmButtonText: 'Aktualisieren',
+        showLoaderOnConfirm: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            api.send("/api/servermanager", "POST", {url: "/executemanagerupdate", data: JSON.stringify({version: version})}).then(function(response) {
+              response = JSON.parse(response);
+              if (response.error) {
+                Swal.fire({
+                  title: "Es ist ein interner Fehler aufgetreten.",
+                  text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'.",
+                  icon: "error"
+                })
+              } else if (response.result == "running") {
+                this.managerPendingChecker(version);
+              } else {
+                Swal.fire({
+                  title: "Es ist ein Fehler aufgetreten.",
+                  text: "Bitte erneut versuchen.",
+                  icon: "error"
+                })
+              }
+            });
+          }.bind(this))
+        }.bind(this)
+      })
+    },
+    managerPendingChecker: function(version) {
+      api.send("/api/servermanager", "POST", {url: "/managerupdatecheck"}).then(function(response) {
+        response = JSON.parse(response);
+        if (!response.result) {
+          setTimeout(function() {this.managerPendingChecker(version);}.bind(this), 2000);
+        } else {
+          if (response.result == version) {
+            Swal.fire({
+              title: "ServerManager wurde erfolgreich aktualisiert.",
+              icon: "success"
+            }).then(function() {
+              this.checkManager();
+            })
+          } else if (response.error) {
+            Swal.fire({
+              title: "Es ist ein Fehler aufgetreten.",
+              text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'",
+              icon: "error"
+            })
+          } else if (response.result) {
+            setTimeout(function() {managerPendingChecker(version);}.bind(this), 2000);
+          } else {
+            Swal.fire({
+              title: "Es ist ein Fehler aufgetreten.",
+              text: "Bitte erneut versuchen.",
+              icon: "error"
+            })
+          }
+        }
+      }.bind(this));
+    }
+  },
+  on: {
+    pageInit: function() {
+      this.get();
+    }
+  }
+};
+</script>

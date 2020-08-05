@@ -1,0 +1,105 @@
+<template>
+  <div class="page">
+    <a href="#nav" class="nav-toggle">Menu</a>
+    <p style="font-family: Arial, sans-serif; font-size: 45px;"><b>IP</b>FIRE</p>
+    <span id="errorcode"></span>
+    <p>Um SchoolConnect mit einem IPFire-Server zu verbinden muss der SSH-Zugriff aktiviert werden. Dazu bitte auf der Weboberflächer der IPFire auf <b>System</b> -> <b>SSH-Zugriff</b> gehen, <b>Passwortbasierte Authentifizierung zulassen</b> aktivieren und auf <b>Speichern</b> klicken. <b>Achtung:</b> Bereits eingerichtete Firewall-Regeln werden überschrieben!</p>
+    <img src="static/ipfire_ssh.png" style="max-width: 700px;"/>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <h4>Einrichtungsmodus</h4>
+        <input type="radio" name="ipfire-type" checked id="new-ipfire" @input="updateView"/>&nbsp;Eine neue IPFire-Instanz verbinden (Hinweis: Das Root-Passwort wird nicht gespeichert)
+        <br />
+        <input type="radio" name="ipfire-type" id="old-ipfire" @input="updateView"/>&nbsp;Eine IPFire-Instanz verbinden, die bereits mit einer SchoolConnect-Instanz verbunden war
+      </div>
+      <div class="two-col-two">
+        <h4>Zugangsdaten</h4>
+        <div class="input-group">
+          <input type="text" id="url" required/>
+          <span class="input-bar"></span>
+          <label>IPFire-URL</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="port" required/>
+          <span class="input-bar"></span>
+          <label>Port (IPFire-Default: 222)</label>
+        </div>
+        <div class="input-group hide-on-old">
+          <input type="password" id="rootpassword" required/>
+          <span class="input-bar"></span>
+          <label>IPFire Root-Passwort</label>
+        </div>
+        <div class="input-group">
+          <input type="password" id="password" required/>
+          <span class="input-bar"></span>
+          <label>Passwort für IPFire-Benutzer</label>
+        </div>
+        <div class="input-group hide-on-old">
+          <input type="password" id="password2" required/>
+          <span class="input-bar"></span>
+          <label>Passwort für IPFire-Benutzer wiederholen</label>
+        </div>
+      </div>
+    </div>
+    <br />
+    <button @click="setUp">>> Weiter</button>
+    <button @click="jumpOver">Überspringen</button>
+  </div>
+</template>
+<script>
+import Swal from 'sweetalert2';
+import api from '../../js/api.js';
+import errormsg from '../../js/errormessages.js';
+export default {
+  methods: {
+    updateView: function() {
+      if (document.getElementById("new-ipfire").checked) {
+        for (const element of document.getElementsByClassName("hide-on-old")) {
+          element.classList.remove("nodisplay");
+        }
+      } else {
+        for (const element of document.getElementsByClassName("hide-on-old")) {
+          console.log(element);
+          element.classList.add("nodisplay");
+        }
+      }
+    },
+    setUp: function() {
+      let self = this;
+      if (document.getElementById("new-ipfire").checked && document.getElementById("password").value != document.getElementById("password2").value) {
+        Swal.fire({
+          title: "Die Passwörter für den IPFire-Benutzer stimmen nicht überein.",
+          icon: "warning"
+        });
+        return;
+      }
+      let data = {
+        url: document.getElementById("url").value,
+        port: document.getElementById("port").value,
+        password: document.getElementById("password").value,
+      }
+      if (document.getElementById("new-ipfire").checked) {
+        data["setup"] = true;
+        data["rootpassword"] = document.getElementById("rootpassword").value;
+      }
+      api.send("/api/setup/ipfire", "POST", data).then(function(response) {
+        if (response == "SUCCESS") {
+          window.location.reload();
+        } else {
+          errormsg.fire(response);
+        }
+      })
+    },
+    jumpOver: function() {
+      let self = this;
+      api.send("/api/setup/ipfire", "POST", {jump: true}).then(function(response) {
+        if (response == "SUCCESS") {
+          window.location.reload();
+        } else {
+          errormsg.fire(response);
+        }
+      })
+    }
+  }
+};
+</script>

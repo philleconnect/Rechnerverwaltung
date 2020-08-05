@@ -1,0 +1,1 @@
+1,DROP,FORWARDFW,ON,cust_grp_src,blocked,std_net_tgt,RED,,,,,,,,,,,,,,,,,,,,00:00,00:00,,AUTO,,dnat,,,,,second

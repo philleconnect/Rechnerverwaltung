@@ -1,0 +1,411 @@
+<template>
+  <div class="page" data-name="Accounts">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>ACCOUNT</b>BEARBEITEN</p>
+    <p>Nutzername: <span id="username"></span></p>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <div class="input-group">
+          <input type="text" id="firstname" required @input="detectChange()"/>
+          <span class="input-bar"></span>
+          <label>Vorname</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="lastname" required @input="detectChange()"/>
+          <span class="input-bar"></span>
+          <label>Nachname</label>
+        </div>
+        <div class="input-group">
+          <input type="email" id="email" required @input="detectChange()"/>
+          <span class="input-bar"></span>
+          <label>E-Mail Adresse</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="title" required @input="detectChange()"/>
+          <span class="input-bar"></span>
+          <label>Titel</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="short" required @input="detectChange()"/>
+          <span class="input-bar"></span>
+          <label>Kürzel</label>
+        </div>
+        </div>
+        <div class="two-col-two">
+          <p>Geschlecht: </p>
+          <select id="day"></select>
+          .
+          <select id="month">
+            <option value="01">Januar</option>
+            <option value="02">Februar</option>
+            <option value="03">März</option>
+            <option value="04">April</option>
+            <option value="05">Mai</option>
+            <option value="06">Juni</option>
+            <option value="07">Juli</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Dezember</option>
+          </select>
+          .
+          <select id="year"></select>
+          <p></p>
+          <p>Geburtsdatum: </p>
+          <p></p><select id="sex"><option value="0">-</option><option value="1">männlich</option><option value="2">weiblich</option><option value="3">diverse</option></select>
+          <p></p>
+          <button @click="resetPassword()">Passwort zurücksetzen</button>
+          <br />
+          <input type="checkbox" id="persistant" />&nbsp;Dauerhafter Nutzer
+          <p>Dauerhafte Nutzer bleiben beim Jahrgangsübergang erhalten, auch wenn sie nicht in den Importdaten enthalten sind. Dies ist z.B. für (externe) Administratoren, Sekretariate oder Hausmeister sinnvoll.</p>
+          <p id="pwAutoGen"></p>
+        </div>
+      </div>
+      <button @click="load()">Zurücksetzen</button>
+      <button @click="save()">Speichern</button>
+      <h3>Gruppenmitgliedschaften</h3>
+      <p>Änderungen an den Gruppenmitgliedschaften werden sofort gespeichert.</p>
+      <div class="two-col-container">
+        <div class="two-col-one">
+          <p>Gruppen von <span id="username-groups"></span></p>
+          <div class="datagrid">
+            <table id="has-groups-table">
+              <thead>
+                <tr>
+                  <th>Gruppe</th>
+                  <th>Aktion</th>
+                </tr>
+              </thead>
+              <tbody id="groups-chosen"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="two-col-two">
+          <p>Verfügbare Gruppen</p>
+          <div class="datagrid">
+            <table id="available-groups-table">
+              <thead>
+                <tr>
+                  <th>Gruppe</th>
+                  <th>Aktion</th>
+                </tr>
+              </thead>
+              <tbody id="groups-available"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <h3>Geräte</h3>
+      <div class="two-col-container">
+      <div class="two-col-one">
+        <p>Geräte von <span id="username-devices"></span></p>
+        <div class="datagrid">
+          <table id="devices-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+              </tr>
+            </thead>
+            <tbody id="devices"></tbody>
+          </table>
+        </div>
+        <p>Gerätezuweisungen sowie gerätespezifische Einstellungen können im Bereich 'Geräte' mit entsprechenden Rechten geändert werden.</p>
+      </div>
+      <div class="two-col-two">
+        <p>Login-Vorgänge / Versuche</p>
+        <div class="datagrid">
+          <table id="logins-table">
+            <thead>
+              <tr>
+                <th>Gerät</th>
+                <th>Zeit</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="logins"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
+let user = [];
+let groups = [];
+let changed = false;
+let hasGroupsSearch = null;
+let availableGroupsSearch = null;
+let devicesSerach = null;
+let loginsSearch = null;
+export default {
+  methods: {
+    // Data loading
+    load: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/user/" + this.$route.params.id, "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        user = response;
+        if (!this.changed) {
+          document.getElementById("username-groups").innerHTML = response.username;
+          document.getElementById("username-devices").innerHTML = response.username;
+          document.getElementById("username").innerHTML = response.username;
+          document.getElementById("firstname").value = response.firstname;
+          document.getElementById("lastname").value = response.lastname;
+          document.getElementById("email").value = response.email;
+          document.getElementById("title").value = response.title;
+          document.getElementById("short").value = response.short;
+          if (response.birthdate != null) {
+            let birthdate = response.birthdate.split("-");
+            document.getElementById("year").value = birthdate[0];
+            document.getElementById("month").value = birthdate[1];
+            document.getElementById("day").value = birthdate[2];
+          }
+          if (response.persistant == 1) {
+            document.getElementById("persistant").checked = true;
+          }
+          document.getElementById("sex").value = (response.sex != null) ? response.sex : 0;
+        }
+        let style = false;
+        let chosenGroupsTable = "";
+        let devicesTable = "";
+        let loginsTable = "";
+        for (const group of response.groups) {
+          if (style) {
+            chosenGroupsTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            chosenGroupsTable += "<tr>";
+            style = true;
+          }
+          chosenGroupsTable += "<td>" + group["name"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"delete-group\"><i class=\"f7-icons icon-default\">minus_circle_fill</i></a></td></tr>";
+        }
+        document.getElementById("groups-chosen").innerHTML = (chosenGroupsTable != "") ? chosenGroupsTable : "Keine Gruppenmitgliedschaften vorhanden.";
+        style = false;
+        for (const device of response.devices) {
+          if (style) {
+            devicesTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            devicesTable += "<tr>";
+            style = true;
+          }
+          devicesTable += "<td>" + device["name"] + "</td></tr>";
+        }
+        document.getElementById("devices").innerHTML = (devicesTable != "") ? devicesTable : "Keine Geräte vorhanden.";
+        style = false;
+        for (const login of response.logins) {
+          if (style) {
+            loginsTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            loginsTable += "<tr>";
+            style = true;
+          }
+          loginsTable += "<td>" + login["devicename"] + "</td><td></td><td></td></tr>";
+        }
+        document.getElementById("logins").innerHTML = (loginsTable != "") ? loginsTable : "Keine Loginversuche vorhanden.";
+        for (const element of document.getElementsByClassName("delete-group")) {
+          element.addEventListener("click", function(e) {
+            this.deleteGroup(parseInt(e.target.parentElement.dataset.id));
+          }.bind(this));
+        }
+        if (user["autogenPassword"]) {
+          document.getElementById("pwAutoGen").innerHTML = "Dieser Nutzer verwendet das automatisch generierte Passwort '" + user["autogenPassword"] + "'";
+        }
+        this.loadGroups();
+        this.loadDevicesSearch();
+      }.bind(this));
+    },
+    loadGroups: function() {
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        preloader.toggle();
+        response = JSON.parse(response);
+        groups = response;
+        let style = false;
+        let availableGroupsTable = "";
+        for (const group of response) {
+          if (!this.userHasGroup(group["id"])) {
+            if (style) {
+              availableGroupsTable += "<tr class=\"alt\">";
+              style = false;
+            } else {
+              availableGroupsTable += "<tr>";
+              style = true;
+            }
+            availableGroupsTable += "<td>" + group["name"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-group\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+          }
+        }
+        document.getElementById("groups-available").innerHTML = (availableGroupsTable != "") ? availableGroupsTable : "Keine Gruppen vorhanden.";
+        for (const element of document.getElementsByClassName("add-group")) {
+          element.addEventListener("click", function(e) {
+            this.addGroup(parseInt(e.target.parentElement.dataset.id));
+          }.bind(this));
+        }
+        this.loadGroupSearch();
+      }.bind(this));
+    },
+
+    // Group functions
+    addGroup: function(id) {
+      preloader.toggle("SPEICHERN");
+      api.send("/api/group/" + id + "/user/" + this.$route.params.id, "POST", {}).then(function(response) {
+        preloader.toggle();
+        this.load();
+      }.bind(this));
+    },
+    deleteGroup: function(id) {
+      preloader.toggle("SPEICHERN");
+      api.send("/api/group/" + id + "/user/" + this.$route.params.id, "DELETE", {}).then(function(response) {
+        preloader.toggle();
+        this.load();
+      }.bind(this));
+    },
+
+    // Data functions
+    userHasGroup: function(id) {
+      for (const group of user.groups) {
+        if (group["id"] == id) {
+          return true;
+        }
+      }
+      return false;
+    },
+    getBirthdateValue: function() {
+      return document.getElementById("year").value + "-" + document.getElementById("month").value + "-" + document.getElementById("day").value;
+    },
+    detectChange: function() {
+      changed = true;
+    },
+
+    // Data search
+    loadGroupSearch: function() {
+      if (hasGroupsSearch != null) {
+        hasGroupsSearch.disable();
+      }
+      hasGroupsSearch = new tableSearch("has-groups-table", {
+        col_1: "none",
+      });
+      if (availableGroupsSearch != null) {
+        availableGroupsSearch.disable();
+      }
+      availableGroupsSearch = new tableSearch("available-groups-table", {
+        col_1: "none",
+      });
+    },
+    loadDevicesSearch: function() {
+      if (devicesSerach != null) {
+        devicesSerach.disable();
+      }
+      devicesSerach = new tableSearch("devices-table", {
+        col_1: "none",
+      });
+      if (loginsSearch != null) {
+        loginsSearch.disable();
+      }
+      loginsSearch = new tableSearch("logins-table", {
+        col_1: "none",
+      });
+    },
+
+    // Data saving
+    save: function() {
+      Swal.fire({
+        title: "Änderungen speichern?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: 'Speichern',
+        cancelButtonText: 'Abbrechen',
+        confirmButtonColor: '#1155BC',
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            let persistant = document.getElementById("persistant").checked ? 1 : 0;
+            api.send("/api/user/" + this.$route.params.id, "PUT", {
+              id: this.$route.params.id,
+              firstname: document.getElementById("firstname").value,
+              lastname: document.getElementById("lastname").value,
+              email: document.getElementById("email").value,
+              title: document.getElementById("title").value,
+              short: document.getElementById("short").value,
+              birthdate: this.getBirthdateValue(),
+              sex: document.getElementById("sex").value,
+              persistant: persistant
+            }).then(function(response) {
+              Swal.fire({
+                title: "Änderungen erfolgreich gespeichert.",
+                icon: "success",
+              }).then(function() {
+                window.app.views.main.router.navigate("/users");
+              })
+            });
+          }.bind(this))
+        }.bind(this)
+      });
+    },
+    resetPassword: function() {
+      Swal.mixin({
+        input: "password",
+        confirmButtonText: "Weiter &rarr;",
+        showCancelButton: true,
+        cancelButtonText: "Abbrechen",
+        progressSteps: ["1", "2", "3"],
+      }).queue([
+        {
+          title: "Neues Passwort eingeben",
+          text: "Bitte geben Sie ein neues Passwort für diesen Account ein."
+        },
+        {
+          title: "Neues Passwort wiederholen",
+          text: "Bitte geben Sie das neue Passwort erneut ein."
+        },
+        {
+          title: "Authentifizieren",
+          text: "Bitte geben Sie ihr Passwort zur Authentifizierung ein."
+        }
+      ]).then((result) => {
+        if (result.value) {
+          Swal.fire({
+            title: "Passwort wirklich zurücksetzen?",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: 'Zurücksetzen',
+            cancelButtonText: 'Abbrechen',
+            confirmButtonColor: '#1155BC',
+          });
+          Swal.showLoading();
+          api.send("/api/user/" + this.$route.params.id + "/resetpassword", "PUT", {
+            authpassword: result.value[2],
+            password: result.value[0],
+            password2: result.value[1],
+          }).then(function(response) {
+            Swal.fire({
+              title: "Passwort erfolgreich zurückgesetzt.",
+              icon: "success"
+            });
+          });
+        }
+      })
+    },
+  },
+  on: {
+    pageInit: function(e, page) {
+      let d = new Date();
+      for (let i = d.getFullYear(); i >= (d.getFullYear() - 110); i--) {
+        document.getElementById("year").innerHTML += '<option value="' + i + '">' + i + '</option>';
+      }
+      for (let i = 1; i < 32; i++) {
+        if (i < 10) {
+          document.getElementById("day").innerHTML += '<option value="0' + i + '">' + i + '</option>';
+        } else {
+          document.getElementById("day").innerHTML += '<option value="' + i + '">' + i + '</option>';
+        }
+      }
+      this.load();
+    },
+  }
+};
+</script>

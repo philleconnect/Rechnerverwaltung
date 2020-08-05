@@ -1,0 +1,163 @@
+<template>
+  <div class="page" data-name="Gruppenlaufwerke">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>GRUPPENLAUFWERK</b>BEARBEITEN</p>
+    <p>Gruppenlaufwerk: <span id="name"></span></p>
+    <p>Pfad: <span id="path"></span></p>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <p>Gruppen mit Zugriffsberechtigung</p>
+        <div class="datagrid">
+          <table>
+            <thead>
+              <tr>
+                <th>Gruppe</th>
+                <th>Schreiben</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="groups-chosen"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="two-col-two">
+        <p>Verfügbare Gruppen</p>
+        <div class="datagrid">
+          <table>
+            <thead>
+              <tr>
+                <th>Gruppe</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="groups-available"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+let share = null;
+export default {
+  methods: {
+    // Data loading
+    load: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/shares", "GET", {}).then(function(response) {
+        for (const el of JSON.parse(response)) {
+          if (el["id"] == this.$route.params.id) {
+            share = el;
+          }
+        }
+        document.getElementById("name").innerHTML = share["name"];
+        document.getElementById("path").innerHTML = share["path"];
+        let table = "";
+        let style = false;
+        for (const group of share["groups"]) {
+          if (style) {
+            table += "<tr class=\"alt\">";
+          } else {
+            table += "<tr>";
+          }
+          style = !style;
+          let write = "";
+          let writeButton = "";
+          console.log(group["permission"]);
+          if (group["permission"] > 0) {
+            write = "<i class=\"f7-icons\" style=\"color: green;\">checkmark_circle_fill</i>";
+            writeButton = "<a href=\"#\" data-id=\"" + group["id"] + "\" class=\"delete-write\"><i class=\"f7-icons\" style=\"color: red;\">pencil_slash</i></a>";
+          } else {
+            writeButton = "<a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-write\"><i class=\"f7-icons\" style=\"color: green;\">pencil</i></a>";
+          }
+          table += "<td>" + group["name"] + "</td><td>" + write + "</td><td>" + writeButton + "&nbsp;&nbsp;&nbsp;<a href=\"#\" data-id=\"" + group["id"] + "\" class=\"delete-group\"><i class=\"f7-icons icon-default\">minus_circle_fill</i></a></td></tr>";
+        }
+        document.getElementById("groups-chosen").innerHTML = (table != "") ? table : "Keine Zugriffsberechtigungen vergeben.";
+        for (const element of document.getElementsByClassName("delete-group")) {
+          element.addEventListener("click", function(e) {
+            this.deleteGroup(e.target.parentElement.dataset.id);
+          }.bind(this));
+        }
+        for (const element of document.getElementsByClassName("add-write")) {
+          element.addEventListener("click", function(e) {
+            this.writePermission(e.target.parentElement.dataset.id, 1);
+          }.bind(this));
+        }
+        for (const element of document.getElementsByClassName("delete-write")) {
+          element.addEventListener("click", function(e) {
+            this.writePermission(e.target.parentElement.dataset.id, 0);
+          }.bind(this));
+        }
+        this.loadGroups();
+      }.bind(this));
+    },
+    loadGroups: function() {
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        preloader.toggle();
+        let table = "";
+        let style = false;
+        for (const group of JSON.parse(response)) {
+          if (!this.groupInShare(group["id"])) {
+            if (style) {
+              table += "<tr class=\"alt\">";
+            } else {
+              table += "<tr>";
+            }
+            style = !style;
+            table += "<td>" + group["name"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-group\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+          }
+        }
+        document.getElementById("groups-available").innerHTML = (table != "") ? table : "Keine Gruppen verfügbar.";
+        for (const element of document.getElementsByClassName("add-group")) {
+          element.addEventListener("click", function(e) {
+            this.addGroup(e.target.parentElement.dataset.id);
+          }.bind(this));
+        }
+      }.bind(this));
+    },
+
+    // Data functions
+    groupInShare: function(id) {
+      for (const group of share["groups"]) {
+        if (group["id"] == id) {
+         return true;
+        }
+      }
+      return false;
+    },
+
+    // Group functions
+    addGroup: function(id) {
+      preloader.toggle("SPEICHERN");
+      api.send("/api/share/" + this.$route.params.id + "/group/" + id, "POST", {}).then(function(response) {
+        preloader.toggle();
+        this.load();
+      }.bind(this));
+    },
+    deleteGroup: function(id) {
+      preloader.toggle("SPEICHERN");
+      api.send("/api/share/" + this.$route.params.id + "/group/" + id, "DELETE", {}).then(function(response) {
+        preloader.toggle();
+        this.load();
+      }.bind(this));
+    },
+
+    // Write permission functions
+    writePermission: function(id, mode) {
+      preloader.toggle("SPEICHERN");
+      api.send("/api/share/" + this.$route.params.id + "/group/" + id, "PUT", {permission: mode}).then(function(response) {
+        preloader.toggle();
+        this.load();
+      }.bind(this));
+    },
+  },
+  on: {
+    pageInit: function() {
+      this.load();
+    }
+  }
+};
+</script>

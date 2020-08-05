@@ -1,0 +1,418 @@
+<template>
+  <div class="page" data-name="Konfigurationsprofil hinzufügen">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>KONFIGURATIONSPROFIL</b>ANLEGEN</p>
+    <div class="progress-container" id="progress">
+      <div class="progress-wrapper">
+        <div class="arrow-steps clearfix">
+          <div class="step current"><span>Vorlage wählen</span></div>
+          <div class="step"><span>Daten eingeben</span></div>
+          <div class="step"><span>Gruppen wählen</span></div>
+          <div class="step"><span>Gruppenlaufwerke wählen</span></div>
+          <div class="step"><span>Fertigstellen</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="steps-content">
+      <div class="steps-content-box current" id="step-1">
+        <p>Neue Konfigurationsprofile können auf Basis eines bestehenden Profils erstellt werden.</p>
+        <select id="template"></select>
+        <br />
+        <button @click="finish1()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-2">
+        <div class="two-col-container">
+          <div class="two-col-one">
+            <div class="input-group">
+              <input type="text" id="profile-name" required @input="existingCheck()">
+              <span class="input-bar"></span>
+              <label>Profilname</label>
+            </div>
+            <p id="profile-existing"></p>
+            <br />
+            <p>Infotext: Dieser Text wird in der Loginoberfläche sowie in den Clientprogrammen angezeigt.</p>
+            <div class="input-group">
+              <textarea id="profile-comment" required></textarea>
+              <span class="input-bar"></span>
+              <label>Infotext</label>
+            </div>
+            <br />
+          </div>
+          <div class="two-col-two">
+            <p>Falls die Internetsperre mittels IPFire eingerichtet ist, kann hier festgelegt werden, ob der Internetzugang nach dem Booten freigeschaltet sein soll.</p>
+            <input type="checkbox" id="networklock-default" checked/>&nbsp;Internet bei Boot freigeben
+          </div>
+        </div>
+        <button @click="finish2()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-3">
+        <p>Bitte weisen Sie dem neuen Konfigurationsprofil beliebig viele Gruppen zu. Diese entscheiden, welche Nutzer das Gerät verwenden können.</p>
+        <div class="select-tables">
+          <div class="select-table">
+            <p>Ausgewählte Gruppen mit Anmelderecht</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gruppe</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="groups-chosen"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="select-table select-table-right">
+            <p>Verfügbare Gruppen</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gruppe</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="groups-available"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish3()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-4">
+        <p>Ausgewählte Gruppenlaufwerke sind an allen Geräten mit diesem Profil verfügbar.</p>
+        <div class="select-tables">
+          <div class="select-table">
+            <p>An Geräten mit diesem Profil verfügbare Gruppenlaufwerke</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gruppe</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="shares-chosen"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="select-table select-table-right">
+            <p>Verfügbare Gruppenlaufwerke</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gruppe</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="shares-available"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish4()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-5">
+        <h3>Bitte überprüfen Sie ihre Eingaben.</h3>
+        <div class="two-col-container">
+          <div class="two-col-one">
+            <h3>Profildaten:</h3>
+            <p>Name: <span id="fin-name"></span></p>
+            <p>Internetsperre: <span id="fin-networklock"></span></p>
+            <p>Infotext:</p>
+            <p><span id="fin-comment"></span></p>
+          </div>
+          <div class="two-col-two">
+            <h3>Gruppenzuweisungen:</h3>
+            <ul id="fin-groups" class="fin-list"></ul>
+            <h3>Gruppenlaufwerke:</h3>
+            <ul id="fin-shares" class="fin-list"></ul>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish5()">Konfigurationsprofil anlegen</button>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+import progress from '../../js/progress.js';
+let existingProfiles = null;
+let selectedGroups = [];
+let selectedShares = [];
+let existingGroups = [];
+let existingShares = [];
+export default {
+  methods: {
+    // Data loading
+    loadProfiles: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/profiles", "GET", {}).then(function(response) {
+        preloader.toggle();
+        existingProfiles = JSON.parse(response);
+        this.setupSourceSelection();
+      }.bind(this));
+    },
+    loadTemplate: function(id) {
+      preloader.toggle("LADEN");
+      api.send("/api/profile/" + id, "GET", {}).then(function(response) {
+        preloader.toggle();
+        response = JSON.parse(response);
+        document.getElementById("profile-comment").value = response.comment;
+        document.getElementById("networklock-default").checked = response.networklockDefault;
+        selectedGroups = response.groups;
+        selectedShares = response.shares;
+      }.bind(this));
+    },
+    loadGroups: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        preloader.toggle();
+        existingGroups = JSON.parse(response);
+        this.createGroupTable();
+      }.bind(this));
+    },
+    loadShares: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/shares", "GET", {}).then(function(response) {
+        preloader.toggle();
+        existingShares = JSON.parse(response);
+        this.createShareTable();
+      }.bind(this));
+    },
+
+    // Progress steps
+    finish1: function() {
+      if (document.getElementById("template").value >= 0) {
+        this.loadTemplate(document.getElementById("template").value);
+      }
+      progress.next();
+    },
+    finish2: function() {
+      if (document.getElementById("profile-name").value == "") {
+        Swal.fire({
+          title: "Bitte einen Namen eingeben.",
+          icon: "warning"
+        })
+      } else {
+        this.loadGroups();
+        progress.next();
+      }
+    },
+    finish3: function() {
+      this.loadShares();
+      progress.next();
+    },
+    finish4: function() {
+      this.createFinishView();
+      progress.next();
+    },
+    finish5: function() {
+      this.save();
+    },
+    back: function() {
+      progress.prev();
+    },
+
+    // Data printing
+    setupSourceSelection: function() {
+      document.getElementById("template").innerHTML = "<option value=\"-1\" selected>Leeres Profil erstellen</option>";
+      for (const profile of existingProfiles) {
+        document.getElementById("template").innerHTML += "<option value=\"" + profile.id + "\">" + profile.name + "</option>"
+      }
+    },
+    createGroupTable: function() {
+      let selectedTable = "";
+      let availableTable = "";
+      let style = false;
+      for (const id of selectedGroups) {
+        if (style) {
+          selectedTable += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          selectedTable += "<tr>";
+          style = true;
+        }
+        selectedTable += "<td>" + this.getDetails(id, "name", existingGroups) + "</td><td><a href=\"#\" data-id=\"" + id + "\" class=\"delete-group\"><i class=\"f7-icons icon-default\">multiply_circle_fill</i></a></td></tr>";
+      }
+      style = false;
+      for (const group of existingGroups) {
+        if (selectedGroups.indexOf(group["id"]) < 0) {
+          if (style) {
+            availableTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            availableTable += "<tr>";
+            style = true;
+          }
+          availableTable += "<td>" + group["name"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-group\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+        }
+      }
+      document.getElementById("groups-chosen").innerHTML = (selectedTable != "") ? selectedTable : "Keine Gruppe gewählt.";
+      document.getElementById("groups-available").innerHTML = (availableTable != "") ? availableTable : "Keine Gruppe verfügbar.";
+      for (const element of document.getElementsByClassName("add-group")) {
+        element.addEventListener("click", function(e) {
+          this.addGroup(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-group")) {
+        element.addEventListener("click", function(e) {
+          this.deleteGroup(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+    },
+    createShareTable: function() {
+      let selectedTable = "";
+      let availableTable = "";
+      let style = false;
+      for (const id of selectedShares) {
+        if (style) {
+          selectedTable += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          selectedTable += "<tr>";
+          style = true;
+        }
+        selectedTable += "<td>" + this.getDetails(id, "name", existingShares) + "</td><td><a href=\"#\" data-id=\"" + id + "\" class=\"delete-group\"><i class=\"f7-icons icon-default\">multiply_circle_fill</i></a></td></tr>";
+      }
+      style = false;
+      for (const group of existingShares) {
+        if (selectedShares.indexOf(group["id"]) < 0) {
+          if (style) {
+            availableTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            availableTable += "<tr>";
+            style = true;
+          }
+          availableTable += "<td>" + group["name"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-group\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+        }
+      }
+      document.getElementById("shares-chosen").innerHTML = (selectedTable != "") ? selectedTable : "Keine Gruppe gewählt.";
+      document.getElementById("shares-available").innerHTML = (availableTable != "") ? availableTable : "Keine Gruppe verfügbar.";
+      for (const element of document.getElementsByClassName("add-group")) {
+        element.addEventListener("click", function(e) {
+          this.addShare(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-group")) {
+        element.addEventListener("click", function(e) {
+          this.deleteShare(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+    },
+    createFinishView: function() {
+      document.getElementById("fin-name").innerHTML = document.getElementById("profile-name").value;
+      document.getElementById("fin-comment").innerHTML = document.getElementById("profile-comment").value;
+      document.getElementById("fin-networklock").innerHTML = document.getElementById("networklock-default").checked ? "Internet nach Boot freigeschaltet." : "Internet nach Boot gesperrt.";
+      for (const id of selectedGroups) {
+        document.getElementById("fin-groups").innerHTML += "<li><i class=\"f7-icons icon-inline\">chevron_right</i>&nbsp;&nbsp;" + this.getDetails(id, "name", existingGroups) + "</li>";
+      }
+      for (const id of selectedShares) {
+        document.getElementById("fin-shares").innerHTML += "<li><i class=\"f7-icons icon-inline\">chevron_right</i>&nbsp;&nbsp;" + this.getDetails(id, "name", existingShares) + "</li>";
+      }
+    },
+
+    // Group functions
+    addGroup: function(id) {
+      selectedGroups.push(id);
+      this.createGroupTable();
+    },
+    deleteGroup: function(id) {
+      for (var i = 0; i < selectedGroups.length; i++) {
+        if (selectedGroups[i] == id) {
+          selectedGroups.splice(i, 1);
+        }
+      }
+      this.createGroupTable();
+    },
+
+    // Share functions
+    addShare: function(id) {
+      selectedShares.push(id);
+      this.createShareTable();
+    },
+    deleteShare: function(id) {
+      for (var i = 0; i < selectedShares.length; i++) {
+        if (selectedShares[i] == id) {
+          selectedShares.splice(i, 1);
+        }
+      }
+      this.createShareTable();
+    },
+
+    // Helpers
+    evalPossibleNames: function(name) {
+      if (existingProfiles != null) {
+        for (const profile of existingProfiles) {
+          if (profile.name == name) {
+            return 1;
+          }
+        }
+        return 0;
+      } else {
+        return -1;
+      }
+    },
+    existingCheck: function() {
+      let test = this.evalPossibleNames(document.getElementById("profile-name").value);
+      if (document.getElementById("profile-name").value == "") {
+        document.getElementById("profile-existing").innerHTML = "";
+      } else if (test == 0) {
+        document.getElementById("profile-existing").style.color = "green";
+        document.getElementById("profile-existing").innerHTML = "Profilname frei.";
+      } else if (test == -1) {
+        document.getElementById("profile-existing").style.color = "blue";
+        document.getElementById("profile-existing").innerHTML = "Fehler bei der Profilnamenprüfung.";
+      } else {
+        document.getElementById("profile-existing").style.color = "red";
+        document.getElementById("profile-existing").innerHTML = "Dieser Profilname ist leider bereits vergeben.";
+      }
+    },
+    getDetails: function(id, type, array) {
+      for (const element of array) {
+        if (element["id"] == id) {
+         return element[type];
+        }
+      }
+      return "";
+    },
+
+    // Data saving
+    save: function() {
+      let profile = {
+        name: document.getElementById("profile-name").value,
+        comment: document.getElementById("profile-comment").value,
+        networklockDefault: document.getElementById("networklock-default").checked ? 1 : 0,
+        groups: JSON.stringify(selectedGroups),
+        shares: JSON.stringify(selectedShares)
+      }
+      api.send("/api/profile", "POST", profile).then(function(response) {
+        Swal.fire({
+          title: "Konfigurationsprofil erfolgreich hinzugefügt.",
+          icon: "success"
+        }).then(function() {
+          window.app.views.main.router.navigate("/profiles");
+        })
+      }.bind(this));
+    },
+  },
+  on: {
+    pageInit: function() {
+      progress.setup();
+      this.loadProfiles();
+      existingProfiles = null;
+      selectedGroups = [];
+      selectedShares = [];
+      existingGroups = [];
+      existingShares = [];
+    }
+  }
+};
+</script>

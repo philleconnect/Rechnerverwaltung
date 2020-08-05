@@ -1,0 +1,130 @@
+<template>
+  <div class="page" data-name="Gruppenlaufwerke">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>GRUPPEN</b>LAUFWERKE</p>
+    <p>Gruppenlaufwerke sind Netzwerkordner, auf die eine ganze Nutzergruppe zugreifen kann. Die Zugriffsrechte lassen sich dabei für jede Gruppe individuell einstellen. Es ist möglich, direkte Unterordner eines Gruppenlaufwerks für eine andere Gruppe oder mit anderen Rechten freizugeben.</p>
+    <div class="datagrid">
+      <table id="groupfolders">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Pfad</th>
+            <th>Zugriff für Gruppen</th>
+            <th>Aktion</th>
+          </tr>
+        </thead>
+        <tbody id="gfcontent">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
+let shares = [];
+export default {
+  methods: {
+    // Data loading
+    load: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/shares", "GET", {}).then(function(response) {
+        shares = JSON.parse(response);
+        this.print();
+      }.bind(this));
+    },
+
+    // Data printing
+    print: function() {
+      preloader.toggle();
+      let style = true;
+      let tableContent = "";
+      for (const share of shares) {
+        if (style) {
+          tableContent += "<tr>";
+        } else {
+          tableContent += "<tr class=\"alt\">";
+        }
+        style = !style;
+        let groups = "";
+        let first = true;
+        for (const group of share["groups"]) {
+          if (first) {
+            first = false;
+          } else {
+            groups += "<br />";
+          }
+          if (group.permission == 1) {
+            groups += group.name + ' (Lesen und schreiben)';
+          } else {
+            groups += group.name + ' (Nur lesen)';
+          }
+        }
+        tableContent += '<td>' + share["name"] + '</td><td>' + share["path"] + '</td><td>' + groups + '</td><td><a href="#" onclick="window.app.views.main.router.navigate(\'/shares/' + share["id"] + '\')"><i class="f7-icons icon-default">gear_alt_fill</i></a><a href="#" data-id="' + share["id"] + '" class="delete-share"><i class="f7-icons icon-default">trash_fill</i></a></td></tr>';
+      }
+      document.getElementById("gfcontent").innerHTML = (shares.length < 1) ? "Keine Gruppenlaufwerke angelegt." : tableContent;
+      for (const element of document.getElementsByClassName("delete-share")) {
+        element.addEventListener("click", function(e) {
+          this.delete(e.target.parentElement.dataset.id);
+        }.bind(this));
+      }
+    },
+
+    // Data functions
+    getNameForId: function(id) {
+      for (const share of shares) {
+        if (share["id"] == id) {
+          return share["name"];
+        }
+      }
+      return id;
+    },
+
+    // Deleting
+    delete: function(id) {
+      Swal.fire({
+        title: "Gruppenlaufwerk '" + this.getNameForId(id) + "' wirklich löschen?",
+        text: "Das Laufwerk sowie alle Inhalte werden für immer gelöscht.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: 'Löschen',
+        cancelButtonText: 'Abbrechen',
+        confirmButtonColor: '#D33',
+        cancelButtonColor: "#3085d6",
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            Swal.fire({
+              title: "Ich frage nochmal zur Sicherheit.",
+              text: "Gruppenlaufwerk '" + this.getNameForId(id) + "' wirklich löschen? Das Laufwerk sowie alle Inhalte werden für immer gelöscht.",
+              icon: "question",
+              showCancelButton: true,
+              confirmButtonText: 'Löschen',
+              cancelButtonText: 'Abbrechen',
+              confirmButtonColor: '#D33',
+              cancelButtonColor: "#3085d6",
+              preConfirm: function() {
+                return new Promise(function(resolve) {
+                  api.send("/api/share/" + id, "DELETE", {}).then(function() {
+                    Swal.fire({
+                      title: "Gruppenlaufwerk erfolgreich gelöscht.",
+                      icon: "success"
+                    })
+                    this.load();
+                  }.bind(this));
+                }.bind(this))
+              }.bind(this)
+            });
+          }.bind(this))
+        }.bind(this)
+      })
+    },
+  },
+  on: {
+    pageInit: function() {
+      this.load();
+    }
+  }
+};
+</script>

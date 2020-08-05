@@ -1,0 +1,129 @@
+<template>
+  <div class="page" data-name="Accounts">
+    <p style="font-family: Arial, sans-serif; font-size: 45px;"><b>ACCOUNT</b>VERWALTUNG</p>
+    <p>Derzeit vorhandene Nutzeraccounts:</p>
+    <div class="datagrid" style="overflow: auto;">
+      <table id="users">
+        <thead>
+          <tr>
+            <th>Nutzername</th>
+            <th>Name</th>
+            <th>Geburtsdatum</th>
+            <th>E-Mail Addresse</th>
+            <th>Aktionen</th>
+          </tr>
+        </thead>
+        <tbody id="accounts"></tbody>
+      </table>
+    </div>
+    <br />
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
+import birthday from '../../js/birthday.js';
+let users = [];
+let search = null;
+export default {
+  methods: {
+    load: function() {
+      preloader.toggle('LADEN');
+      api.send("/api/users", "GET", {}).then(function(response) {
+        preloader.toggle();
+        users = JSON.parse(response);
+        this.print()
+      }.bind(this));
+    },
+    print: function() {
+      document.getElementById("accounts").innerHTML = "";
+      let style = false;
+      for (const user of users) {
+        let tableRow = "";
+        if (style) {
+          tableRow += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          tableRow += "<tr>";
+          style = true;
+        }
+        tableRow += "<td>" + user["username"] + "</td><td>" + user["firstname"] + " " + user["lastname"] + "</td><td>" + essentials.minusIfNull(birthday.convertToGermanFormat(user["birthdate"])) + "</td><td>" + essentials.minusIfNull(user["email"]) + "</td><td><a href=\"#\" onclick=\"window.app.views.main.router.navigate('/users/" + user["id"] + "')\"><i class=\"f7-icons icon-default\">gear_alt_fill</i></a>&nbsp;&nbsp;&nbsp;<a href=\"#\" data-id=\"" + user["id"] + "\" class=\"delete-user\"><i class=\"f7-icons icon-default\">trash_fill</i></a></td></tr>";
+        document.getElementById("accounts").innerHTML += tableRow;
+      }
+      for (const element of document.getElementsByClassName("delete-user")) {
+        element.addEventListener("click", function(e) {
+          this.delete(e.target.parentElement.dataset.id);
+        }.bind(this));
+      }
+      this.loadSearch();
+    },
+    getUsernameForId: function(id) {
+      for (const user of users) {
+        if (user["id"] == id) {
+          return user["username"];
+        }
+      }
+      return id;
+    },
+    delete: function(id) {
+      Swal.fire({
+        title: "Nutzer '" + this.getUsernameForId(id) + "' wirklich löschen?",
+        text: "Der Nutzeraccounts sowie entsprechende Log-Einträge werden für immer gelöscht. Die persönlichen Daten des Nutzers werden zunächst nicht gelöscht.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: 'Löschen',
+        cancelButtonText: 'Abbrechen',
+        confirmButtonColor: '#D33',
+        cancelButtonColor: "#3085d6",
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            Swal.fire({
+              title: "Ich frage nochmal zur Sicherheit.",
+              text: "Nutzer '" + this.getUsernameForId(id) + "' wirklich löschen? Der Nutzeraccounts sowie entsprechende Log-Einträge werden für immer gelöscht. Die persönlichen Daten des Nutzers werden zunächst nicht gelöscht.",
+              icon: "question",
+              showCancelButton: true,
+              confirmButtonText: 'Löschen',
+              cancelButtonText: 'Abbrechen',
+              confirmButtonColor: '#D33',
+              cancelButtonColor: "#3085d6",
+              preConfirm: function() {
+                return new Promise(function(resolve) {
+                  Swal.showLoading();
+                  api.send("/api/user/" + id, "DELETE", {}).then(function(response) {
+                    this.load();
+                    Swal.fire({
+                      title: "Nutzer erfolgreich gelöscht.",
+                      text: "Die persönlichen Daten des Nutzers werden weiterhin aufbewahrt.",
+                      icon: "success",
+                    });
+                  }.bind(this));
+                }.bind(this))
+              }.bind(this)
+            });
+          }.bind(this))
+        }.bind(this)
+      });
+    },
+
+    // Data search
+    loadSearch: function() {
+      if (search != null) {
+        search.disable();
+      }
+      search = new tableSearch("users", {
+        col_4: "none",
+        clear_filter_text: "Alle anzeigen",
+        sort_select: true
+      });
+    }
+  },
+  on: {
+    pageInit: function() {
+      this.load();
+    }
+  }
+};
+</script>

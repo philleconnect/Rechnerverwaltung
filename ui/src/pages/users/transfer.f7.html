@@ -1,0 +1,979 @@
+<template>
+  <div class="page" data-name="LUSD-Jahrgangsübergang">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>LUSD</b>JAHRGANGSÜBERGANG</p>
+    <div class="progress-container" id="progress">
+      <div class="progress-wrapper">
+        <div class="arrow-steps clearfix">
+          <div class="step current"><span>Datei einlesen</span></div>
+          <div class="step"><span>Daten konfigurieren</span></div>
+          <div class="step"><span>Neu erstellen</span></div>
+          <div class="step"><span>Übertragen</span></div>
+          <div class="step"><span>Löschen</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="steps-content">
+      <div class="steps-content-box current" id="step-1">
+        <p>Bitte laden Sie hier die Datei, aus der die Nutzer und Gruppen importiert werden sollen. Es werden JSON-Dateien akzeptiert, die zuvor mit einem PhilleConnect-Konverterskript erzeugt wurden.</p>
+        <label for="fileinput" @click="openFileLoader()">
+          <button>Datei laden</button>
+        </label>
+        <input type="file" id="fileinput" class="nodisplay" @change="fileChange()"/>
+        <p></p>
+        <div class="standalone-container" id="no-file">
+          <i class="f7-icons standalone-icon" style="color: #1155BC;">info_circle_fill</i><p class="standalone-icon-headline">Keine Datei geladen.</p>
+        </div>
+        <div class="standalone-container nodisplay" id="unknown-file">
+          <i class="f7-icons standalone-icon" style="color: red;">bolt_circle_fill</i><p class="standalone-icon-headline">Die Datei '<span class="filename"></span>' ist keine lesbare JSON-Datei.</p>
+        </div>
+        <div class="standalone-container nodisplay" id="text-file">
+          <i class="f7-icons standalone-icon" style="color: green;">checkmark_circle_fill</i><p class="standalone-icon-headline">Geladen: <span class="filename"></span></p>
+        </div>
+        <button @click="finish1()" id="continue-1" disabled>Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-2">
+        <p>Das Nutzerpasswort für neue Accounts kann importiert oder automatisch generiert werden.</p>
+        <input type="radio" value="auto" name="pwoptions" id="pwoptions-auto" @input="changePasswordMode()" checked/>&nbsp;Passwort automatisch vergeben (kann bis zur Änderung eingesehen werden)
+        <br />
+        <input type="radio" value="manual" name="pwoptions" id="pwoptions-manual" @input="changePasswordMode()"/>&nbsp;Geburtsdatum als Passwort verwenden (kann nicht eingesehen werden)
+        <br />
+        <button @click="finish2()" id="continue-2">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-3">
+        <p>Folgende Gruppen werden neu erstellt:</p>
+        <div class="spoiler-control-container">
+          <p class="spoiler-control-title">Gruppen</p>
+          <i class="f7-icons size-29 spoiler-control-checkbox" id="spoiler-new-groups">chevron_down</i>
+        </div>
+        <div class="spoiler spoiler-invisible" id="spoiler-new-groups-container">
+          <div class="datagrid">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Name</th>
+                </tr>
+              </thead>
+              <tbody id="finish-new-groups">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p>Folgende Nutzer werden importiert:</p>
+        <p>Mit einem Klick auf <i class="f7-icons">xmark_circle_fill</i> wird dieser Nutzer nicht importiert.</p>
+        <div class="spoiler-control-container">
+          <p class="spoiler-control-title">Accounts</p>
+          <i class="f7-icons size-29 spoiler-control-checkbox" id="spoiler-new-users">chevron_down</i>
+        </div>
+        <div class="spoiler spoiler-invisible" id="spoiler-new-users-container">
+          <div class="datagrid">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Nutzername</th>
+                  <th>Vorname</th>
+                  <th>Name</th>
+                  <th>E-Mail</th>
+                  <th>Geburtsdatum</th>
+                  <th>Aktion</th>
+                </tr>
+              </thead>
+              <tbody id="finish-new-users">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <button @click="finish3()" id="continue-3">Importieren</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-4">
+        <p>Die Eigenschaften folgender Nutzer werden aktualisiert:</p>
+        <p>Aus rot markierten Gruppen wird der User entfernt, in grün markierte Gruppen wird der User neu hinzugefügt.</p>
+        <p>Mit einem Klick auf <i class="f7-icons">xmark_circle_fill</i> werden für diesen Nutzer keine Änderungen durchgeführt.</p>
+        <div class="spoiler-control-container">
+          <p class="spoiler-control-title">Accounts</p>
+          <i class="f7-icons size-29 spoiler-control-checkbox" id="spoiler-change-users">chevron_down</i>
+        </div>
+        <div class="spoiler spoiler-invisible" id="spoiler-change-users-container">
+          <div class="datagrid">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Nutzername</th>
+                  <th>Bisherige Gruppen</th>
+                  <th>Neue Gruppen</th>
+                  <th>Aktion</th>
+                </tr>
+              </thead>
+              <tbody id="finish-change-users">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <button @click="finish4()" id="continue-4">Aktualisieren</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-5">
+        <p>Folgende Nutzer werden gelöscht:</p>
+        <p>Mit einem Klick auf <i class="f7-icons">trash_slash_fill</i> wird dieser Nutzer beibehalten.</p>
+        <div class="spoiler-control-container">
+          <p class="spoiler-control-title">Accounts</p>
+          <i class="f7-icons size-29 spoiler-control-checkbox" id="spoiler-old-users">chevron_down</i>
+        </div>
+        <div class="spoiler spoiler-invisible" id="spoiler-old-users-container">
+          <div class="datagrid">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Nutzername</th>
+                  <th>Vorname</th>
+                  <th>Name</th>
+                  <th>E-Mail</th>
+                  <th>Geburtsdatum</th>
+                  <th>Aktion</th>
+                </tr>
+              </thead>
+              <tbody id="finish-old-users">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p>Folgende Gruppen sind leer und werden gelöscht:</p>
+        <p>Mit einem Klick auf <i class="f7-icons">trash_slash_fill</i> wird diese Gruppe beibehalten.</p>
+        <div class="spoiler-control-container">
+          <p class="spoiler-control-title">Gruppen</p>
+          <i class="f7-icons size-29 spoiler-control-checkbox" id="spoiler-old-groups">chevron_down</i>
+        </div>
+        <div class="spoiler spoiler-invisible" id="spoiler-old-groups-container">
+          <div class="datagrid">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Name</th>
+                  <th>Aktion</th>
+                </tr>
+              </thead>
+              <tbody id="finish-old-groups">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <button @click="finish5()" id="continue-5">Löschen</button>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import progress from '../../js/progress.js';
+import Swal from 'sweetalert2';
+import password from '../../js/password.js';
+import usernameChecker from '../../js/username.js';
+import birthday from '../../js/birthday.js';
+import spoiler from '../../js/spoiler.js';
+let existingUsers = [];
+let groups = [];
+let groupsToCreate = [];
+let usersToCreate = [];
+let data = [];
+let usersToDelete = [];
+let usersToChange = [];
+let emptyGroups = [];
+let passwordAutoGen = true;
+let groupsCreated = 0;
+let usersChanged = 0;
+let usersToCreateLength = 0;
+let usersToChangeLength = 0;
+export default {
+  methods: {
+    // Data loading
+    loadUsers: function() {
+      api.send("/api/users", "GET", {}).then(function(response) {
+        existingUsers = JSON.parse(response);
+      });
+    },
+    loadGroups: function(cb) {
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        groups = JSON.parse(response);
+        if (cb != null) cb();
+      });
+    },
+
+    // Step functions
+    finish1: function() {
+      let files = document.getElementById("fileinput").files;
+      if (files.length > 0) {
+        this.readFile(files[0]);
+      } else {
+        Swal.fire({
+          title: "Bitte eine Datei laden.",
+          icon: "error"
+        })
+      }
+    },
+    finish1_read: function(event) {
+      try {
+        data = JSON.parse(event.target.result);
+        if (!data.type || data.type != "philleconnect/users-and-groups") {
+          Swal.fire({
+            title: "Die Datei konnte nicht gelesen werden.",
+            text: "Es handelt sich nicht um eine PhilleConnect-Importdatei.",
+            icon: "error"
+          })
+        } else {
+          progress.next();
+        }
+      } catch(e) {
+        Swal.fire({
+          title: "Die Datei konnte nicht gelesen werden.",
+          text: "Es handelt sich nicht um eine gültige JSON-Datei.",
+          icon: "error"
+        })
+      }
+    },
+    finish2: function() {
+      Swal.fire({
+        title: "Analysiere Nutzer",
+        text: "Dies kann einige Minuten dauern.",
+        icon: "info",
+        onOpen: function() {
+          Swal.showLoading();
+          this.calculateTransfer();
+        }.bind(this)
+      });
+    },
+    finish3: function() {
+      Swal.mixin({
+        confirmButtonText: '',
+        showCancelButton: false,
+        allowEscapeKey: false,
+        allowOutsideClick: false,
+        progressSteps: ['1', '2'],
+        html: "<span id=\"popup-text\"></span>"
+      }).queue([
+        "Gruppen anlegen",
+        "Accounts anlegen",
+      ])
+      setTimeout(function() {
+        this.createGroups();
+      }.bind(this), 50)
+      this.createTransferView();
+    },
+    finish4: function() {
+      Swal.fire({
+        title: "Änderungen übernehmen",
+        html: "<span id=\"popup-text\"></span>",
+        showCancelButton: false,
+        allowEscapeKey: false,
+        allowOutsideClick: false,
+        confirmButtonText: ''
+      })
+      setTimeout(function() {
+        this.changeUsers();
+      }.bind(this), 50)
+      this.loadEmptyGroups();
+    },
+    finish5: function() {
+      Swal.mixin({
+        confirmButtonText: '',
+        showCancelButton: false,
+        allowEscapeKey: false,
+        allowOutsideClick: false,
+        progressSteps: ['1', '2'],
+        html: "<span id=\"popup-text\"></span>"
+      }).queue([
+        "Accounts löschen",
+        "Gruppen löschen",
+      ])
+      setTimeout(function() {
+        this.deleteUsers();
+      }.bind(this), 50)
+    },
+    back: function() {
+      progress.prev();
+    },
+    createNewView: function() {
+      var groupTable = "";
+      var style = false;
+      for (const group of groupsToCreate) {
+        if (style) {
+          groupTable += "<tr class=\"alt\">";
+        } else {
+          groupTable += "<tr>";
+        }
+        style = !style;
+        groupTable += "<td id=\"status_group_" + groupsToCreate.indexOf(group) + "\">" + this.getStatusHTML(0) + "</td><td>" + group.name + "</td></tr>";
+      }
+      var userTable = "";
+      style = false;
+      for (const user of usersToCreate) {
+        if (style) {
+          userTable += "<tr class=\"alt\">";
+        } else {
+          userTable += "<tr>";
+        }
+        style = !style;
+        let mail = (user.email) ? user.email : "-";
+        let birthdate = (user.birthdate) ? user.birthdate : "-";
+        let change = user.willCreate ? "<a href=\"#\" data-username=\"" + user.username + "\" class=\"remove-from-creation\"><i class=\"f7-icons\" style=\"color: red;\">xmark_circle_fill</i></a>" : "<a href=\"#\" data-username=\"" + user.username + "\" class=\"add-to-creation\" style=\"color: green;\"><i class=\"f7-icons\">plus_circle_fill</i></a>";
+        userTable += "<td id=\"status_" + usersToCreate.indexOf(user) + "\">" + this.getStatusHTML(0) + "</td><td>" + user.username + "</td><td>" + user.firstname + "</td><td>" + user.lastname + "</td><td>" + mail + "</td><td>" + birthdate + "</td><td>" + change + "</td></tr>";
+      }
+      document.getElementById("finish-new-groups").innerHTML = (groupTable == "") ? "Keine Gruppen." : groupTable;
+      document.getElementById("finish-new-users").innerHTML = (userTable == "") ? "Keine Benutzer." : userTable;
+      for (const element of document.getElementsByClassName("remove-from-creation")) {
+        element.addEventListener("click", function(e) {
+          this.creationChanger(e.target.parentElement.dataset.username, false);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("add-to-creation")) {
+        element.addEventListener("click", function(e) {
+          this.creationChanger(e.target.parentElement.dataset.username, true);
+        }.bind(this));
+      }
+    },
+    createTransferView: function() {
+      var userTable = "";
+      var style = false;
+      for (const user of usersToChange) {
+        if (style) {
+          userTable += "<tr class=\"alt\">";
+        } else {
+          userTable += "<tr>";
+        }
+        style = !style;
+        let oldGroups = "";
+        let newGroups = "";
+        let actualGroups = this.getPropertyForId(user.id, "groups");
+        for (const gid of user.groups) {
+          if (newGroups != "") newGroups += "<br />";
+          newGroups += (actualGroups.includes(gid)) ? this.getGroupName(gid) : "<span style=\"color: green;\">" + this.getGroupName(gid) + "</span>";
+        }
+        for (const gid of actualGroups) {
+          if (oldGroups != "") oldGroups += "<br />";
+          oldGroups += (user.groups.includes(gid)) ? this.getGroupName(gid) : "<span style=\"color: red;\">" + this.getGroupName(gid) + "</span>";
+        }
+        let change = user.willChange ? "<a href=\"#\" data-id=\"" + user.id + "\" class=\"remove-from-change\"><i class=\"f7-icons\" style=\"color: red;\">xmark_circle_fill</i></a>" : "<a href=\"#\" data-id=\"" + user.id + "\" class=\"add-to-change\"><i class=\"f7-icons\" style=\"color: green;\">plus_circle_fill</i></a>";
+        userTable += "<td id=\"status_change_" + usersToChange.indexOf(user) + "\">" + this.getStatusHTML(0) + "</td><td>" + this.getPropertyForId(user.id, "username") + "</td><td>" + oldGroups + "</td><td>" + newGroups + "</td><td>" + change + "</td></tr>";
+      }
+      document.getElementById("finish-change-users").innerHTML = (userTable == "") ? "Keine Benutzer." : userTable;
+      for (const element of document.getElementsByClassName("remove-from-change")) {
+        element.addEventListener("click", function(e) {
+          this.changeChanger(e.target.parentElement.dataset.id, false);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("add-to-change")) {
+        element.addEventListener("click", function(e) {
+          this.changeChanger(e.target.parentElement.dataset.id, true);
+        }.bind(this));
+      }
+    },
+    createDeleteView: function() {
+      var groupTable = "";
+      var style = false;
+      for (const group of emptyGroups) {
+        if (style) {
+          userTable += "<tr class=\"alt\">";
+        } else {
+          userTable += "<tr>";
+        }
+        style = !style;
+        let deleteButton = group.willDelete ? "<a href=\"#\" data-id=\"" + group.id + "\" class=\"keep-group\"><i class=\"f7-icons\" style=\"color: red;\">trash_slash_fill</i></a>" : "<a href=\"#\" data-id=\"" + group.id + "\" class=\"delete-group\"><i class=\"f7-icons\" style=\"color: green;\">trash_fill</i></a>";
+        groupTable += "<td id=\"status_groups_delete_" + emptyGroups.indexOf(group) + "\">" + this.getStatusHTML(0) + "</td><td>" + this.getGroupName(group.id) + "</td><td>" + deleteButton + "</td></tr>";
+      }
+      document.getElementById("finish-old-groups").innerHTML = (groupTable == "") ? "Keine Gruppen." : groupTable;
+      for (const element of document.getElementsByClassName("keep-group")) {
+        element.addEventListener("click", function(e) {
+          this.deleteGroupChanger(parseInt(e.target.parentElement.dataset.id), false);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-group")) {
+        element.addEventListener("click", function(e) {
+          this.deleteGroupChanger(parseInt(e.target.parentElement.dataset.id), true);
+        }.bind(this));
+      }
+      var userTable = "";
+      style = false;
+      for (const user of usersToDelete) {
+        if (style) {
+          userTable += "<tr class=\"alt\">";
+        } else {
+          userTable += "<tr>";
+        }
+        style = !style;
+        let deleteButton = user.willDelete ? "<a href=\"#\" data-id=\"" + user.id + "\" class=\"keep-user\"><i class=\"f7-icons\" style=\"color: red;\">trash_slash_fill</i></a>" : "<a href=\"#\" data-id=\"" + user.id + "\" class=\"delete-user\"><i class=\"f7-icons\" style=\"color: green;\">trash_fill</i></a>";
+        userTable += "<td id=\"status_user_delete_" + usersToDelete.indexOf(user) + "\">" + this.getStatusHTML(0) + "</td><td>" + this.getPropertyForId(user.id, "username") + "</td><td>" + this.getPropertyForId(user.id, "firstname") + "</td><td>" + this.getPropertyForId(user.id, "lastname") + "</td><td>" + this.getPropertyForId(user.id, "email") + "</td><td>" + this.getPropertyForId(user.id, "birthdate") + "</td><td>" + deleteButton + "</td></tr>";
+      }
+      document.getElementById("finish-old-users").innerHTML = (userTable == "") ? "Keine Benutzer." : userTable;
+      for (const element of document.getElementsByClassName("keep-user")) {
+        element.addEventListener("click", function(e) {
+          this.deleteChanger(e.target.parentElement.dataset.id, false);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-user")) {
+        element.addEventListener("click", function(e) {
+          this.deleteChanger(e.target.parentElement.dataset.id, true);
+        }.bind(this));
+      }
+    },
+
+    // Data loading
+    loadEmptyGroups: function() {
+      api.send("/api/groups/empty", "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        let eg = [];
+        for (const group of response) {
+          let g = {
+            id: group,
+            willDelete: true
+          }
+          eg.push(g);
+        }
+        emptyGroups = eg;
+        this.createDeleteView();
+      }.bind(this))
+    },
+
+    // The actual transfering logic
+    calculateTransfer: function() {
+      // Detect all groups we have to create
+      for (const group of data.groups) {
+        let exists = false;
+        for (const existingGroup of groups) {
+          if (group == existingGroup.name) {
+            exists = true;
+          }
+        }
+        if (!exists) {
+          groupsToCreate.push({name: group, status: 0});
+        }
+      }
+      // Process users
+      for (const user of data.users) {
+        let found = false;
+        for (const eu of existingUsers) {
+          if (user.firstname == eu.firstname && user.lastname == eu.lastname && birthday.convertToDBFormat(user.birthdate) == eu.birthdate) { // Transfer
+            let u = {
+              id: eu.id,
+              groups: [],
+              willChange: true
+            }
+            for (const group of user.groups) {
+              let gid = this.getGroupId(group);
+              if (gid < 0) {
+                u.groups.push(group);
+              } else {
+                u.groups.push(gid);
+              }
+            }
+            usersToChange.push(u);
+            eu.found = true;
+            found = true;
+          }
+        }
+        if (!found) { // Create new
+          let u = {
+            firstname: user.firstname,
+            lastname: user.lastname,
+            birthdate: user.birthdate,
+            email: (user.email) ? user.email : "",
+            preferredname: user.firstname + " " + user.lastname,
+            groups: [],
+            sex: 0,
+            username: usernameChecker.addNumber(user.firstname, user.lastname, this.listUsernames()),
+            status: 0,
+            willCreate: true
+          }
+          for (const group of user.groups) {
+            let gid = this.getGroupId(group);
+            if (gid < 0) {
+              u.groups.push(group);
+            } else {
+              u.groups.push(gid);
+            }
+          }
+          if (passwordAutoGen) {
+            u.cleartext = true;
+            let pw = password.create(8);
+            u.password = pw;
+            u.password2 = pw;
+          } else {
+            u.password = user.birthdate;
+            u.password2 = user.birthdate;
+          }
+          usersToCreate.push(u);
+        }
+      }
+      // Find users not in new dataset
+      for (const user of existingUsers) {
+        if (user.found != true && user.persistant != 1) {
+          user.willDelete = true;
+          usersToDelete.push(user);
+        }
+      }
+      // End
+      Swal.close();
+      this.createNewView();
+      progress.next();
+    },
+    fixGroups: function() {
+      for (let i = 0; i < usersToCreate.length; i++) {
+        for (let j = 0; j < usersToCreate[i].groups.length; j++) {
+          if (!Number.isInteger(usersToCreate[i].groups[j])) {
+            usersToCreate[i].groups[j] = this.getGroupId(usersToCreate[i].groups[j]);
+          }
+        }
+      }
+      for (let i = 0; i < usersToChange.length; i++) {
+        for (let j = 0; j < usersToChange[i].groups.length; j++) {
+          if (!Number.isInteger(usersToChange[i].groups[j])) {
+            usersToChange[i].groups[j] = this.getGroupId(usersToChange[i].groups[j]);
+          }
+        }
+      }
+    },
+
+    // File reading
+    readFile: function(file) {
+      const reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = this.finish1_read;
+    },
+    fileChange: function() {
+      let files = document.getElementById("fileinput").files;
+      if (files.length > 0) {
+        if (files[0].type.includes("application/json")) {
+          document.getElementById("no-file").classList.add("nodisplay");
+          document.getElementById("unknown-file").classList.add("nodisplay");
+          document.getElementById("text-file").classList.remove("nodisplay");
+          document.getElementById("continue-1").disabled = false;
+        } else {
+          document.getElementById("no-file").classList.add("nodisplay");
+          document.getElementById("unknown-file").classList.remove("nodisplay");
+          document.getElementById("text-file").classList.add("nodisplay");
+          document.getElementById("continue-1").disabled = true;
+        }
+        for (const el of document.getElementsByClassName("filename")) {
+          el.innerHTML = files[0].name;
+        }
+      } else {
+        document.getElementById("no-file").classList.remove("nodisplay");
+        document.getElementById("unknown-file").classList.add("nodisplay");
+        document.getElementById("text-file").classList.add("nodisplay");
+        document.getElementById("continue-1").disabled = true;
+      }
+    },
+
+    // Editing
+    keepUser: function(id) {
+      for (const user of usersToDelete) {
+        if (id == user.id) {
+          while (usersToDelete.indexOf(user) !== -1) {
+            usersToDelete.splice(usersToDelete.indexOf(user), 1);
+          }
+        }
+      }
+      this.createDeleteView();
+    },
+
+    // Importing
+    createGroups: function() {
+      Swal.showLoading();
+      groupsCreated = 0;
+      var taskRunning = false;
+      for (const group of groupsToCreate) {
+        if (group.status == 0) {
+          document.getElementById("popup-text").innerHTML = "0 von " + groupsToCreate.length;
+          api.send("/api/group", "POST", {name: group.name, info: "Mittels LUSD-Import erzeugt.", type: 3}, true).then(function(response) {
+            groupsCreated++;
+            document.getElementById("popup-text").innerHTML = groupsCreated + " von " + groupsToCreate.length;
+            let id = groupsToCreate.indexOf(group);
+            if (response.status == 201) {
+              groupsToCreate[id].status = 1;
+              groupsToCreate[id]["id"] = parseInt(response.responseText);
+              document.getElementById("status_group_" + id).innerHTML = this.getStatusHTML(2);
+            } else {
+              document.getElementById("status_group_" + id).innerHTML = this.getStatusHTML(1);
+            }
+            if (groupsCreated == groupsToCreate.length) {
+              this.loadGroups(this.createUsers);
+            }
+          }.bind(this));
+          taskRunning = true;
+        }
+      }
+      if (!taskRunning) this.createUsers();
+    },
+    createUsers: function() {
+      setTimeout(function() {
+        Swal.hideLoading();
+        Swal.clickConfirm();
+        setTimeout(function() {
+          Swal.showLoading();
+        }, 50);
+      })
+      this.fixGroups();
+      let usersCreated = 0;
+      for (const user of usersToCreate) {
+        if (user.willCreate) {
+          usersToCreateLength++;
+        }
+      }
+      for (const user of usersToCreate) {
+        if (user.willCreate) {
+          let u = user;
+          u.groups = JSON.stringify(u.groups);
+          if (u.birthdate == "") {
+            delete u.birthdate;
+          } else {
+            u.birthdate = birthday.convertToDBFormat(u.birthdate);
+          }
+          if (user.status == 0) {
+            document.getElementById("popup-text").innerHTML = "0 von " + usersToCreateLength;
+            api.send("/api/user", "POST", u, true).then(function(response) {
+              usersCreated++;
+              document.getElementById("popup-text").innerHTML = usersCreated + " von " + usersToCreateLength;
+              let id = usersToCreate.indexOf(user);
+              if (response.status == 201) {
+                usersToCreate[id].status = 2;
+                document.getElementById("status_" + id).innerHTML = this.getStatusHTML(2);
+              } else {
+                usersToCreate[id].status = 1;
+                document.getElementById("status_" + id).innerHTML = this.getStatusHTML(1);
+              }
+              if (!this.hasUserWithStatus(0)) {
+                if (this.hasUserWithStatus(1)) {
+                  Swal.fire({
+                    title: "Import abgeschlossen.",
+                    text: "Während des Importvorgangs sind Fehler aufgetreten. Bitte überprüfen Sie diese Fehler und versuchen es erneut.",
+                    icon: "warning"
+                  }).then(function() {
+                    progress.next();
+                  })
+                } else {
+                  Swal.close();
+                  progress.next();
+                }
+                setTimeout(function() {
+                  Swal.hideLoading();
+                }, 50);
+              }
+            }.bind(this));
+          }
+        }
+      }
+    },
+
+    // Changing
+    changeUsers: function() {
+      Swal.showLoading();
+      for (const user of usersToChange) {
+        if (user.willChange) {
+          usersToChangeLength++;
+        }
+      }
+      document.getElementById("popup-text").innerHTML = "0 von " + usersToChangeLength;
+      for (const user of usersToChange) {
+        let userFailed = false;
+        if (user.willChange) {
+          let actualGroups = this.getPropertyForId(user.id, "groups");
+          let userActionsDone = 0;
+          let userActionsToDo = 0;
+          for (const gid of user.groups) {
+            if (!actualGroups.includes(gid)) {
+              userActionsToDo++;
+            }
+          }
+          for (const gid of actualGroups) {
+            if (!user.groups.includes(gid)) {
+              userActionsToDo++;
+            }
+          }
+          for (const gid of user.groups) {
+            if (!actualGroups.includes(gid)) {
+              api.send("/api/group/" + gid + "/user/" + user.id, "POST", {}, true).then(function(response) {
+                if (response.status != 201) {
+                  userFailed = true;
+                }
+                userActionsDone++;
+                if (userActionsDone >= userActionsToDo) {
+                  let id = usersToChange.indexOf(user);
+                  if (userFailed) {
+                    document.getElementById("status_change_" + id).innerHTML = this.getStatusHTML(1);
+                  } else {
+                    document.getElementById("status_change_" + id).innerHTML = this.getStatusHTML(2);
+                  }
+                  usersChanged++;
+                  this.finalizeUserChange();
+                }
+              }.bind(this))
+            }
+          }
+          for (const gid of actualGroups) {
+            if (!user.groups.includes(gid)) {
+              api.send("/api/group/" + gid + "/user/" + user.id, "DELETE", {}, true).then(function(response) {
+                if (response.status != 200) {
+                  userFailed = true;
+                }
+                userActionsDone++;
+                if (userActionsDone >= userActionsToDo) {
+                  let id = usersToChange.indexOf(user);
+                  if (userFailed) {
+                    document.getElementById("status_change_" + id).innerHTML = this.getStatusHTML(1);
+                  } else {
+                    document.getElementById("status_change_" + id).innerHTML = this.getStatusHTML(2);
+                  }
+                  usersChanged++;
+                  this.finalizeUserChange();
+                }
+              }.bind(this))
+            }
+          }
+          if (userActionsToDo == 0) {
+            usersChanged++;
+            this.finalizeUserChange();
+          }
+        }
+      }
+      if (usersToChange.length == 0) this.finalizeUserChange();
+    },
+    finalizeUserChange: function() {
+      document.getElementById("popup-text").innerHTML = usersChanged + " von " + usersToChangeLength;
+      if (usersChanged >= usersToChangeLength) {
+        Swal.close();
+        progress.next();
+      }
+    },
+
+    // Deleting
+    deleteUsers: function() {
+      Swal.showLoading();
+      let usersDeleted = 0;
+      let usersToDeleteLength = 0;
+      let taskRunning = false;
+      for (const user of usersToDelete) {
+        if (user.willDelete) {
+          usersToDeleteLength++;
+        }
+      }
+      for (const user of usersToDelete) {
+        if (user.willDelete) {
+          document.getElementById("popup-text").innerHTML = "0 von " + usersToDeleteLength;
+          api.send("/api/user/" + user.id, "DELETE", {}, true).then(function(response) {
+            usersDeleted++;
+            document.getElementById("popup-text").innerHTML = usersDeleted + " von " + usersToDeleteLength;
+            let id = usersToDelete.indexOf(user);
+            if (response.status == 200) {
+              user.status = 0;
+              document.getElementById("status_user_delete_" + id).innerHTML = this.getStatusHTML(2);
+            } else {
+              user.status = 1;
+              document.getElementById("status_user_delete_" + id).innerHTML = this.getStatusHTML(1);
+            }
+            if (usersDeleted == usersToDeleteLength) {
+              this.deleteGroups();
+            }
+          }.bind(this));
+          taskRunning = true;
+        }
+      }
+      if (!taskRunning) this.deleteGroups();
+    },
+    deleteGroups: function() {
+      setTimeout(function() {
+        Swal.hideLoading();
+        Swal.clickConfirm();
+        setTimeout(function() {
+          Swal.showLoading();
+        }, 50);
+      })
+      let groupsDeleted = 0;
+      let groupsToDeleteLength = 0;
+      let taskRunning = false;
+      for (const group of emptyGroups) {
+        if (group.willDelete) {
+          groupsToDeleteLength++;
+        }
+      }
+      for (const group of emptyGroups) {
+        if (group.willDelete) {
+          document.getElementById("popup-text").innerHTML = "0 von " + groupsToDeleteLength;
+          api.send("/api/group/" + group.id, "DELETE", {}, true).then(function(response) {
+            groupsDeleted++;
+            document.getElementById("popup-text").innerHTML = groupsDeleted + " von " + groupsToDeleteLength;
+            let id = emptyGroups.indexOf(group);
+            if (response.status == 200) {
+              group.status = 0;
+              document.getElementById("status_groups_delete_" + id).innerHTML = this.getStatusHTML(2);
+            } else {
+              group.status = 1;
+              document.getElementById("status_groups_delete_" + id).innerHTML = this.getStatusHTML(1);
+            }
+            if (groupsDeleted == groupsToDeleteLength) {
+              this.finalize();
+            }
+          }.bind(this));
+          taskRunning = true;
+        }
+      }
+      if (!taskRunning) this.finalize();
+    },
+    finalize: function() {
+      Swal.hideLoading();
+      Swal.close();
+      let foundError = false;
+      for (const group of emptyGroups) {
+        if (group.status == 1) {
+          foundError = true;
+        }
+      }
+      for (const user of usersToDelete) {
+        if (user.status == 1) {
+          foundError = true;
+        }
+      }
+      if (!foundError) {
+        setTimeout(function() {
+          Swal.fire({
+            title: "Jahrgangsübergang erfolgreich abgeschlossen.",
+            icon: "success",
+          }).then(function() {
+            window.app.views.main.router.navigate("/users");
+          })
+        }, 100)
+      } else {
+        setTimeout(function() {
+          Swal.fire({
+            title: "Jahrgangsübergang abgeschlossen.",
+            text: "Während der Übertragung sind Fehler aufgetreten. Bitte überprüfen Sie diese Fehler.",
+            icon: "warning"
+          })
+        }, 100)
+      }
+    },
+
+    // Change-Management
+    creationChanger: function(username, mode) {
+      for (const user of usersToCreate) {
+        if (user.username == username) {
+          user.willCreate = mode;
+        }
+      }
+      this.createNewView();
+    },
+    changeChanger: function(id, mode) {
+      for (const user of usersToChange) {
+        if (user.id == id) {
+          user.willChange = mode;
+        }
+      }
+      this.createTransferView();
+    },
+    deleteChanger: function(id, mode) {
+      for (const user of usersToDelete) {
+        if (user.id == id) {
+          user.willDelete = mode;
+        }
+      }
+      this.createDeleteView();
+    },
+    deleteGroupChanger: function(id, mode) {
+      for (const group of emptyGroups) {
+        if (group.id == id) {
+          group.willDelete = mode;
+        }
+      }
+      this.createDeleteView();
+    },
+
+    // Helpers
+    openFileLoader: function() {
+      document.getElementById("fileinput").click();
+    },
+    changePasswordMode: function() {
+      if (document.getElementById("pwoptions-auto").checked) {
+        passwordAutoGen = true;
+      } else {
+        passwordAutoGen = true;
+      }
+    },
+    getStatusHTML: function(status) {
+      switch(status) {
+        case 0:
+          return "<i class=\"f7-icons\" style=\"color: lightgray;\">ellipsis_circle_fill</i>";
+        case 1:
+          return "<i class=\"f7-icons\" style=\"color: red;\">bolt_circle_fill</i>";
+        case 2:
+          return "<i class=\"f7-icons\" style=\"color: green;\">checkmark_circle_fill</i>";
+      }
+    },
+    hasUserWithStatus: function(status) {
+      for (const user of usersToCreate) {
+        if (user.status == status && user.willCreate) {
+          return true;
+        }
+      }
+      return false;
+    },
+    getGroupId: function(name) {
+      for (const group of groups) {
+        if (group.name == name) {
+          return group.id;
+        }
+      }
+      return -1;
+    },
+    getGroupName: function(id) {
+      for (const group of groups) {
+        if (group.id == id) {
+          return group.name;
+        }
+      }
+      return "";
+    },
+    listUsernames: function() {
+      let list = [];
+      for (const user of existingUsers) {
+        list.push(user.username);
+      }
+      return list;
+    },
+    getPropertyForId: function(id, property) {
+      for (const user of existingUsers) {
+        if (user.id == id) {
+          return user[property];
+        }
+      }
+      return "";
+    }
+  },
+  on: {
+    pageInit: function() {
+      let spoilerOldGroups = new spoiler(document.getElementById('spoiler-old-groups'), document.getElementById('spoiler-old-groups-container'));
+      let spoilerOldUsers = new spoiler(document.getElementById('spoiler-old-users'), document.getElementById('spoiler-old-users-container'));
+      let spoilerChangeUsers = new spoiler(document.getElementById('spoiler-change-users'), document.getElementById('spoiler-change-users-container'));
+      let spoilerNewGroups = new spoiler(document.getElementById('spoiler-new-groups'), document.getElementById('spoiler-new-groups-container'));
+      let spoilerNewUsers = new spoiler(document.getElementById('spoiler-new-users'), document.getElementById('spoiler-new-users-container'));
+      existingUsers = [];
+      groups = [];
+      groupsToCreate = [];
+      usersToCreate = [];
+      data = [];
+      usersToDelete = [];
+      usersToChange = [];
+      emptyGroups = [];
+      passwordAutoGen = true;
+      groupsCreated = 0;
+      usersChanged = 0;
+      usersToCreateLength = 0;
+      usersToChangeLength = 0;
+      progress.setup();
+      this.loadUsers();
+      this.loadGroups();
+    }
+  }
+};
+</script>

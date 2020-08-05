@@ -1,0 +1,105 @@
+<template>
+  <div class="page" data-name="Einstellungen">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>SERVER</b>EINSTELLUNGEN</p>
+    <p>Geänderte Einstellungen werden nach dem Speichern direkt wirksam. Es kann jedoch ein Neustart der betroffenen Services nötig sein.</p>
+    <div class="datagrid">
+      <table id="services">
+        <thead>
+          <tr>
+            <th>Parameter:</th>
+            <th>Beschreibung:</th>
+            <th>Wert:</th>
+          </tr>
+        </thead>
+        <tbody id="tablecontent"></tbody>
+      </table>
+    </div>
+    <button @click="save()">Speichern</button>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+let data = null;
+export default {
+  methods: {
+    load: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/servermanager", "POST", {url: "/listenv"}).then(function(response) {
+        preloader.toggle();
+        data = JSON.parse(response);
+        document.getElementById("tablecontent").innerHTML = "";
+        var style = false;
+        for (let [key, value] of Object.entries(data)) {
+          var row = "";
+          if (style) {
+            row += "<tr class=\"alt\">";
+          } else {
+            row += "<tr>";
+          }
+          style = !style;
+          var input = "";
+          if (value["mutable"]) {
+            input = "<input type=\"text\" value=\"" + value["value"] + "\" id=\"" + key + "\"/>";
+          } else {
+            input = value["value"];
+          }
+          row += "<td>" + key + "</td><td>" + value["description"] + "</td><td>" + input + "</td></tr>";
+          document.getElementById("tablecontent").innerHTML += row;
+        }
+      }.bind(this));
+    },
+    save: function() {
+      Swal.fire({
+        title: "Geänderte Einstellungen wirklich speichern?",
+        icon: "question",
+        showCancelButton: true,
+        cancelButtonText: 'Abbrechen',
+        confirmButtonText: 'Speichern',
+        showLoaderOnConfirm: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            let send = {};
+            for (let [key, value] of Object.entries(data)) {
+              if (value["mutable"] && document.getElementById(key)) {
+                send[key] = {value: document.getElementById(key).value, description: value["description"], mutable: value["mutable"]};
+              }
+            }
+            api.send("/api/servermanager", "POST", {url: "/storeenv", data: JSON.stringify({data: JSON.stringify(send)})}).then(function(response) {
+              response = JSON.parse(response);
+              if (response.error) {
+                Swal.fire({
+                  title: "Es ist ein interner Fehler aufgetreten.",
+                  text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'.",
+                  icon: "error"
+                })
+              } else if (response.result == "SUCCESS") {
+                Swal.fire({
+                  title: "Einstellungen erfolgreich gespeichert.",
+                  icon: "success"
+                })
+                this.load();
+              } else {
+                Swal.fire({
+                  title: "Es ist ein unbekannter Fehler aufgetreten.",
+                  text: "Bitte erneut versuchen.",
+                  icon: "error"
+                })
+              }
+            }.bind(this));
+          }.bind(this))
+        }.bind(this)
+      })
+    },
+  },
+  on: {
+    pageInit: function() {
+      this.load();
+    }
+  }
+};
+</script>

@@ -1,0 +1,447 @@
+<template>
+  <div class="page" data-name="LUSD-Import">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>LUSD</b>IMPORT</p>
+    <div class="progress-container" id="progress">
+      <div class="progress-wrapper">
+        <div class="arrow-steps clearfix">
+          <div class="step current"><span>Datei einlesen</span></div>
+          <div class="step"><span>Daten konfigurieren</span></div>
+          <div class="step"><span>Überprüfen und importieren</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="steps-content">
+      <div class="steps-content-box current" id="step-1">
+        <p>Bitte laden Sie hier die Datei, aus der die Nutzer und Gruppen importiert werden sollen. Es werden JSON-Dateien akzeptiert, die zuvor mit einem PhilleConnect-Konverterskript erzeugt wurden.</p>
+        <label for="fileinput" @click="openFileLoader()">
+          <button>Datei laden</button>
+        </label>
+        <input type="file" id="fileinput" class="nodisplay" @change="fileChange()"/>
+        <p></p>
+        <div class="standalone-container" id="no-file">
+          <i class="f7-icons standalone-icon" style="color: #1155BC;">info_circle_fill</i><p class="standalone-icon-headline">Keine Datei geladen.</p>
+        </div>
+        <div class="standalone-container nodisplay" id="unknown-file">
+          <i class="f7-icons standalone-icon" style="color: red;">bolt_circle_fill</i><p class="standalone-icon-headline">Die Datei '<span class="filename"></span>' ist keine lesbare JSON-Datei.</p>
+        </div>
+        <div class="standalone-container nodisplay" id="text-file">
+          <i class="f7-icons standalone-icon" style="color: green;">checkmark_circle_fill</i><p class="standalone-icon-headline">Geladen: <span class="filename"></span></p>
+        </div>
+        <button @click="finish1()" id="continue-1" disabled>Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-2">
+        <p>Das Nutzerpasswort kann importiert oder automatisch generiert werden.</p>
+        <input type="radio" value="auto" name="pwoptions" id="pwoptions-auto" @input="changePasswordMode()" checked/>&nbsp;Passwort automatisch vergeben (kann bis zur Änderung eingesehen werden)
+        <br />
+        <input type="radio" value="manual" name="pwoptions" id="pwoptions-manual" @input="changePasswordMode()"/>&nbsp;Geburtsdatum als Passwort verwenden (kann nicht eingesehen werden)
+        <br />
+        <button @click="finish2()" id="continue-2">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-3">
+        <p>Folgende Gruppen werden neu erstellt (hier nicht aufgeführte Gruppen existieren bereits und werden nicht neu erstellt):</p>
+        <div class="spoiler-control-container">
+          <p class="spoiler-control-title">Gruppen</p>
+          <i class="f7-icons size-29 spoiler-control-checkbox" id="spoiler-groups">chevron_down</i>
+        </div>
+        <div class="spoiler spoiler-invisible" id="spoiler-groups-container">
+          <p>Folgende Gruppen werden neu erstellt:</p>
+          <div class="datagrid">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Name</th>
+                </tr>
+              </thead>
+              <tbody id="finish-groups">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="spoiler-control-container">
+          <p class="spoiler-control-title">Accounts</p>
+          <i class="f7-icons size-29 spoiler-control-checkbox" id="spoiler-users">chevron_down</i>
+        </div>
+        <div class="spoiler spoiler-invisible" id="spoiler-users-container">
+          <p>Folgende Nutzer werden importiert:</p>
+          <div class="datagrid">
+            <table>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Nutzername</th>
+                  <th>Vorname</th>
+                  <th>Name</th>
+                  <th>E-Mail</th>
+                  <th>Geburtsdatum</th>
+                </tr>
+              </thead>
+              <tbody id="finish-users">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <button @click="import()" id="import-button">Importieren</button>
+        <button @click="fixForReRun()" id="retry-button" class="nodisplay">Erneut versuchen</button>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import progress from '../../js/progress.js';
+import Swal from 'sweetalert2';
+import password from '../../js/password.js';
+import usernameChecker from '../../js/username.js';
+import birthday from '../../js/birthday.js';
+import spoiler from '../../js/spoiler.js';
+let existingUsers = [];
+let groups = [];
+let groupsToCreate = [];
+let usersToCreate = [];
+let data = [];
+let passwordAutoGen = true;
+let groupsCreated = 0;
+let usersCreated = 0;
+export default {
+  methods: {
+    // Data loading
+    load: function() {
+      api.send("/api/users", "GET", {}).then(function(response) {
+        existingUsers = [];
+        for (const user of JSON.parse(response)) {
+          existingUsers.push(user["username"]);
+        }
+      });
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        groups = JSON.parse(response);
+      });
+    },
+
+    // Step functions
+    finish1: function() {
+      let files = document.getElementById("fileinput").files;
+      if (files.length > 0) {
+        this.readFile(files[0]);
+      } else {
+        Swal.fire({
+          title: "Bitte eine Datei laden.",
+          icon: "error"
+        })
+      }
+    },
+    finish1_read: function(event) {
+      try {
+        data = JSON.parse(event.target.result);
+        if (!data.type || data.type != "philleconnect/users-and-groups") {
+          Swal.fire({
+            title: "Die Datei konnte nicht gelesen werden.",
+            text: "Es handelt sich nicht um eine PhilleConnect-Importdatei.",
+            icon: "error"
+          })
+        } else {
+          progress.next();
+        }
+      } catch(e) {
+        Swal.fire({
+          title: "Die Datei konnte nicht gelesen werden.",
+          text: "Es handelt sich nicht um eine gültige JSON-Datei.",
+          icon: "error"
+        })
+      }
+    },
+    finish2: function() {
+      for (const group of data.groups) {
+        let exists = false;
+        for (const existingGroup of groups) {
+          if (group == existingGroup.name) {
+            exists = true;
+          }
+        }
+        if (!exists) {
+          groupsToCreate.push({name: group, status: 0});
+        }
+      }
+      for (const user of data.users) {
+        let u = {
+          firstname: user.firstname,
+          lastname: user.lastname,
+          birthdate: user.birthdate,
+          email: (user.email) ? user.email : "",
+          preferredname: user.firstname + " " + user.lastname,
+          groups: user.groups,
+          sex: 0,
+          username: usernameChecker.addNumber(user.firstname, user.lastname, existingUsers),
+          status: 0
+        }
+        if (passwordAutoGen) {
+          u.cleartext = true;
+          let pw = password.create(8);
+          u.password = pw;
+          u.password2 = pw;
+        } else {
+          u.password = user.birthdate;
+          u.password2 = user.birthdate;
+        }
+        usersToCreate.push(u);
+      }
+      this.createFinishView();
+      progress.next();
+    },
+    back: function() {
+      progress.prev();
+    },
+    createFinishView: function() {
+      var groupTable = "";
+      var style = false;
+      for (const group of groupsToCreate) {
+        if (style) {
+          groupTable += "<tr class=\"alt\">";
+        } else {
+          groupTable += "<tr>";
+        }
+        style = !style;
+        groupTable += "<td id=\"status_group_" + groupsToCreate.indexOf(group) + "\">" + this.getStatusHTML(0) + "</td><td>" + group.name + "</td></tr>";
+      }
+      var userTable = "";
+      style = false;
+      for (const user of usersToCreate) {
+        if (style) {
+          userTable += "<tr class=\"alt\">";
+        } else {
+          userTable += "<tr>";
+        }
+        style = !style;
+        let mail = (user.email) ? user.email : "";
+        userTable += "<td id=\"status_" + usersToCreate.indexOf(user) + "\">" + this.getStatusHTML(0) + "</td><td>" + user.username + "</td><td>" + user.firstname + "</td><td>" + user.lastname + "</td><td>" + mail + "</td><td>" + user.birthdate + "</td></tr>";
+      }
+      document.getElementById("finish-groups").innerHTML = (groupTable == "") ? "Keine Gruppen." : groupTable;
+      document.getElementById("finish-users").innerHTML = (userTable == "") ? "Keine Benutzer." : userTable;
+    },
+
+    // File reading
+    readFile: function(file) {
+      const reader = new FileReader();
+      reader.readAsText(file);
+      reader.onload = this.finish1_read;
+    },
+    fileChange: function() {
+      let files = document.getElementById("fileinput").files;
+      if (files.length > 0) {
+        if (files[0].type.includes("application/json")) {
+          document.getElementById("no-file").classList.add("nodisplay");
+          document.getElementById("unknown-file").classList.add("nodisplay");
+          document.getElementById("text-file").classList.remove("nodisplay");
+          document.getElementById("continue-1").disabled = false;
+        } else {
+          document.getElementById("no-file").classList.add("nodisplay");
+          document.getElementById("unknown-file").classList.remove("nodisplay");
+          document.getElementById("text-file").classList.add("nodisplay");
+          document.getElementById("continue-1").disabled = true;
+        }
+        for (const el of document.getElementsByClassName("filename")) {
+          el.innerHTML = files[0].name;
+        }
+      } else {
+        document.getElementById("no-file").classList.remove("nodisplay");
+        document.getElementById("unknown-file").classList.add("nodisplay");
+        document.getElementById("text-file").classList.add("nodisplay");
+        document.getElementById("continue-1").disabled = true;
+      }
+    },
+
+    // Helpers
+    openFileLoader: function() {
+      document.getElementById("fileinput").click();
+    },
+    changePasswordMode: function() {
+      if (document.getElementById("pwoptions-auto").checked) {
+        passwordAutoGen = true;
+      } else {
+        passwordAutoGen = true;
+      }
+    },
+    getStatusHTML: function(status) {
+      switch(status) {
+        case 0:
+          return "<i class=\"f7-icons\" style=\"color: lightgray;\">ellipsis_circle_fill</i>";
+        case 1:
+          return "<i class=\"f7-icons\" style=\"color: red;\">bolt_circle_fill</i>";
+        case 2:
+          return "<i class=\"f7-icons\" style=\"color: green;\">checkmark_circle_fill</i>";
+      }
+    },
+    hasUserWithStatus: function(status) {
+      for (const user of usersToCreate) {
+        if (user.status == status) {
+          return true;
+        }
+      }
+      return false;
+    },
+    getGroupId: function(name) {
+      for (const group of groups) {
+        if (group.name == name) {
+          return group.id;
+        }
+      }
+      for (const group of groupsToCreate) {
+        if (group.name == name) {
+          return group.id;
+        }
+      }
+      return null;
+    },
+
+    // Importing
+    import: function() {
+      Swal.fire({
+        title: "Nutzer wirklich importieren?",
+        icon: "question",
+        allowEscapeKey: false,
+        allowOutsideClick: false,
+        showCancelButton: true,
+        confirmButtonText: 'Importieren',
+        cancelButtonText: 'Abbrechen',
+        confirmButtonColor: '#D33',
+        cancelButtonColor: "#3085d6",
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            Swal.mixin({
+              confirmButtonText: '',
+              showCancelButton: false,
+              allowEscapeKey: false,
+              allowOutsideClick: false,
+              icon: "info",
+              progressSteps: ['1', '2'],
+              html: "<span id=\"popup-text\"></span>"
+            }).queue([
+              "Gruppen anlegen",
+              "Accounts anlegen",
+            ])
+            setTimeout(function() {
+              this.createGroups();
+            }.bind(this), 50);
+          }.bind(this))
+        }.bind(this)
+      })
+    },
+    createGroups: function() {
+      Swal.showLoading();
+      groupsCreated = 0;
+      var taskRunning = false;
+      for (const group of groupsToCreate) {
+        if (group.status == 0) {
+          document.getElementById("popup-text").innerHTML = "0 von " + groupsToCreate.length;
+          api.send("/api/group", "POST", {name: group.name, info: "Mittels LUSD-Import erzeugt.", type: 3}, true).then(function(response) {
+            groupsCreated++;
+            document.getElementById("popup-text").innerHTML = groupsCreated + " von " + groupsToCreate.length;
+            let id = groupsToCreate.indexOf(group);
+            if (response.status == 201) {
+              groupsToCreate[id].status = 1;
+              groupsToCreate[id]["id"] = parseInt(response.responseText);
+              document.getElementById("status_group_" + id).innerHTML = this.getStatusHTML(2);
+            } else {
+              document.getElementById("status_group_" + id).innerHTML = this.getStatusHTML(1);
+            }
+            if (groupsCreated == groupsToCreate.length) {
+              this.createUsers();
+            }
+          }.bind(this));
+          taskRunning = true;
+        }
+      }
+      if (!taskRunning) this.createUsers();
+    },
+    createUsers: function() {
+      Swal.hideLoading();
+      Swal.clickConfirm();
+      setTimeout(function() {
+        Swal.showLoading();
+      }, 50);
+      usersCreated = 0;
+      for (const user of usersToCreate) {
+        let u = user;
+        let groupNames = u.groups;
+        u.groups = [];
+        for (const group of groupNames) {
+          u.groups.push(this.getGroupId(group));
+        }
+        u.groups = JSON.stringify(u.groups);
+        if (u.birthdate == "") {
+          delete u.birthdate;
+        } else {
+          u.birthdate = birthday.convertToDBFormat(u.birthdate);
+        }
+        if (user.status == 0) {
+          document.getElementById("popup-text").innerHTML = "0 von " + usersToCreate.length;
+          api.send("/api/user", "POST", u, true).then(function(response) {
+            usersCreated++;
+            document.getElementById("popup-text").innerHTML = usersCreated + " von " + usersToCreate.length;
+            let id = usersToCreate.indexOf(user);
+            if (response.status == 201) {
+              usersToCreate[id].status = 2;
+              document.getElementById("status_" + id).innerHTML = this.getStatusHTML(2);
+            } else {
+              usersToCreate[id].status = 1;
+              document.getElementById("status_" + id).innerHTML = this.getStatusHTML(1);
+            }
+            if (!this.hasUserWithStatus(0)) {
+              if (this.hasUserWithStatus(1)) {
+                Swal.fire({
+                  title: "Import abgeschlossen.",
+                  text: "Während des Importvorgangs sind Fehler aufgetreten. Bitte überprüfen Sie diese Fehler.",
+                  icon: "warning"
+                })
+                document.getElementById("import-button").classList.add("nodisplay");
+                document.getElementById("retry-button").classList.remove("nodisplay");
+              } else {
+                Swal.fire({
+                  title: "Import erfolgreich abgeschlossen.",
+                  icon: "success"
+                }).then(function() {
+                  window.app.views.main.router.navigate("/users");
+                })
+              }
+              setTimeout(function() {
+                Swal.hideLoading();
+              }, 50);
+            }
+          }.bind(this));
+        }
+      }
+    },
+    fixForReRun: function() {
+      for (const group of groupsToCreate) {
+        if (group.status == 1) {
+          group.status = 0;
+        }
+      }
+      for (const user of usersToCreate) {
+        if (user.status == 1) {
+          user.status = 0;
+        }
+      }
+      this.import();
+    }
+  },
+  on: {
+    pageInit: function() {
+      let spoilerGroups = new spoiler(document.getElementById('spoiler-groups'), document.getElementById('spoiler-groups-container'));
+      let spoilerUsers = new spoiler(document.getElementById('spoiler-users'), document.getElementById('spoiler-users-container'));
+      existingUsers = [];
+      groups = [];
+      groupsToCreate = [];
+      usersToCreate = [];
+      data = [];
+      passwordAutoGen = true;
+      groupsCreated = 0;
+      usersCreated = 0;
+      progress.setup();
+      this.load();
+    }
+  }
+};
+</script>

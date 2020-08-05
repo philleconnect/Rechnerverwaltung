@@ -1,0 +1,157 @@
+<template>
+  <div class="page" data-name="Gruppen">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>GRUPPEN</b></p>
+    <p>Gruppen fassen mehrere Nutzer zusammen, wobei jeder Nutzer Mitglied beliebig vieler Gruppen werden kann. Mit Gruppen lassen sich die Berechtigungen mehrerer Nutzer einfach verwalten, außerdem können Klassen / Kurse durch Gruppen organisiert werden.</p>
+    <div class="datagrid">
+      <table id="groups">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Info / Beschreibung</th>
+            <th>Typ</th>
+            <th>Berechtigungen</th>
+            <th style="min-width: 70px;">Aktion</th>
+          </tr>
+        </thead>
+        <tbody id="content">
+        </tbody>
+      </table>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
+let groups = [];
+let search = null;
+export default {
+  methods: {
+    // Data loading
+    load: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        preloader.toggle();
+        groups = JSON.parse(response);
+        this.print();
+      }.bind(this));
+    },
+
+    // Data display
+    print: function() {
+      document.getElementById("content").innerHTML = "";
+      let style = false;
+      for (const group of groups) {
+        let tableRow = "";
+        if (style) {
+          tableRow += "<tr class=\"alt\">";
+        } else {
+          tableRow += "<tr>";
+        }
+        style = !style;
+        let permissions = "";
+        let first = true;
+        for (const permission of group["permissions"]) {
+          if (first) {
+            first = false;
+          } else {
+            permissions += ", ";
+          }
+          permissions += permission["name"];
+        }
+        let deleteButton = "";
+        let modifyButton = "";
+        if (group["type"] != 1 && group["type"] != 2) {
+          deleteButton = '&nbsp;&nbsp;&nbsp;<a href="#" data-id="' + group["id"] + '" class="delete-group"><i class="f7-icons icon-default">trash_fill</i></a>';
+        }
+        if (group["type"] != 1) {
+          modifyButton = '<a href="#" onclick="window.app.views.main.router.navigate(\'/groups/' + group["id"] + '\')"><i class="f7-icons icon-default">gear_alt_fill</i></a>';
+        }
+        tableRow += '<td>' + group["name"] + '</td><td>' + group["info"] + '</td><td>' + group["type"] + '</td><td>' + permissions + '</td><td>' + modifyButton + deleteButton + '</td>';
+        document.getElementById("content").innerHTML += tableRow;
+      }
+      for (const element of document.getElementsByClassName("delete-group")) {
+        element.addEventListener("click", function(e) {
+          this.delete(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+      if (groups.length < 1) {
+        document.getElementById("content").innerHTML = "Keine Gruppen vorhanden.";
+      }
+      this.loadSerach();
+    },
+
+    // Data functions
+    getNameForId: function(id) {
+      for (const group of groups) {
+        if (group["id"] == id) {
+          return group["name"];
+        }
+      }
+      return id;
+    },
+
+    // Data search
+    loadSerach: function() {
+      if (search != null) {
+        search.disable();
+      }
+      search = new tableSearch("groups", {
+        col_2: "select",
+        col_4: "none",
+        clear_filter_text: "Alle anzeigen",
+        sort_select: true
+      });
+    },
+
+    // Delete
+    delete: function(id) {
+      Swal.fire({
+        title: "Gruppe '" + this.getNameForId(id) + "' wirklich löschen?",
+        text: "Alle Nutzer werden aus der Gruppe entfernt. Dies kann dazu führen, dass einige Nutzer keine Berechtigungen mehr haben, falls sie ausschließlich Mitglied dieser Gruppe waren.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: 'Löschen',
+        cancelButtonText: 'Abbrechen',
+        confirmButtonColor: '#D33',
+        cancelButtonColor: "#3085d6",
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            Swal.fire({
+              title: "Ich frage nochmal zur Sicherheit.",
+              text: "Gruppe '" + this.getNameForId(id) + "' wirklich löschen? Alle Nutzer werden aus der Gruppe entfernt. Dies kann dazu führen, dass einige Nutzer keine Berechtigungen mehr haben, falls sie ausschließlich Mitglied dieser Gruppe waren.",
+              icon: "question",
+              showCancelButton: true,
+              confirmButtonText: 'Löschen',
+              cancelButtonText: 'Abbrechen',
+              confirmButtonColor: '#D33',
+              cancelButtonColor: "#3085d6",
+              preConfirm: function() {
+                return new Promise(function(resolve) {
+                  Swal.showLoading();
+                  api.send("/api/group/" + id, "DELETE", {}).then(function(response) {
+                    Swal.fire({
+                      title: "Gruppe erfolgreich gelöscht.",
+                      text: "Alle Nutzer wurden aus der Gruppe entfernt.",
+                      icon: "success"
+                    }).then(function() {
+                      this.load();
+                    }.bind(this))
+                  }.bind(this));
+                }.bind(this))
+              }.bind(this)
+            });
+          }.bind(this))
+        }.bind(this)
+      });
+    },
+  },
+  on: {
+    pageInit: function() {
+      this.load();
+    }
+  }
+};
+</script>

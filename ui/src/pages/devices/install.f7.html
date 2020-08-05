@@ -1,0 +1,86 @@
+<template>
+  <div class="page" data-name="Clientinstallation">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>CLIENT</b>INSTALLATION</p>
+    <p>Führen Sie folgende Schritte aus um SchoolConnect auf einem Clientcomputer zu installieren:</p>
+    <p>1. Installationsprogramm herunterladen.</p>
+    <p>2. Konfigurationsdatei erstellen und im selben Ordner wie das Installationsprogramm ablegen.</p>
+    <p>3. SchoolConnect installieren.</p>
+    <br />
+    <h3>Installationsprogramm herunterladen:</h3>
+    <div class="datagrid" style="overflow: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Windows</th>
+            <th>Linux</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><a href="https://github.com/philleconnect/ClientSetup-Windows/releases">https://github.com/philleconnect/ClientSetup-Windows/releases</a></td>
+            <td><a href="https://github.com/philleconnect/ClientSetup-Linux/releases">https://github.com/philleconnect/ClientSetup-Linux/releases</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <br />
+    <h3>Konfigurationsdatei erzeugen:</h3>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <div class="input-group">
+          <input type="text" id="server" required/>
+          <span class="input-bar"></span>
+          <label>Server-URL (ohne https://)</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="global-password-legacy" required/>
+          <span class="input-bar"></span>
+          <label>Globales Passwort</label>
+        </div>
+      </div>
+      <div class="two-col-two">
+        <input type="checkbox" checked id="allowOffline"/>&nbsp;Rechner offline freigeben
+        <br />
+        <p>Der folgende Wert gibt an, wie häufig der Client versuchen soll, eine Netzwerkverbindung aufzubauen. Erlaubt sind ganze Zahlen.</p>
+        <div class="input-group">
+          <input type="text" id="badNetworkReconnect" value="30" required/>
+          <span class="input-bar"></span>
+          <label>Verbindungsversuche</label>
+        </div>
+      </div>
+    </div>
+    <button @click="createConfig()">Konfigurationsdatei erstellen</button>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+export default {
+  methods: {
+    load: function() {
+      api.send("/api/host", "GET", {}).then(function(response) {
+        document.getElementById("server").value = response + ":447";
+      })
+    },
+    createConfig: function() {
+      if (document.getElementById('allowOffline').value) {
+        var allowOffline = '1';
+      } else {
+        var allowOffline = '0';
+      }
+      var text = '#Konfigurationsdatei für PhilleConnect Drive\n#Syntax: key=value -> KEINE LEERZEICHEN!\n#Konfigurationsvariablen:\n#server: Vollständige URL zum PhilleConnect Webserver\n#global: Globales Passwort\n#allowOffline: Rechner ohne Serververbindung freigeben (1) oder herunterfahren (0)\n#badNetworkReconnect: Anzahl der Verbindungsversuche (1 pro Sekunde).\n#automatically created by PhilleConnect Admin backend\nserver='+document.getElementById('server').value+'\nglobal='+document.getElementById('global-password-legacy').value+'\nallowOffline='+allowOffline+'\nbadNetworkReconnect='+document.getElementById('badNetworkReconnect').value;
+      var element = document.createElement('a');
+      element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+      element.setAttribute('download', 'pcconfig.jkm');
+      element.style.display = 'none';
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    }
+  },
+  on: {
+    pageInit: function() {
+      this.load();
+    }
+  }
+};
+</script>

@@ -1,0 +1,85 @@
+/*
+ Input CSS for SchoolConnect Backend
+ © 2019 Johannes Kreutz.
+ */
+.input-group {
+    position: relative;
+    margin-bottom: 5px;
+    margin-top: 15px;
+    width: 350px;
+    margin-right: 0px;
+    display: inline-block;
+}
+.input-group input, .input-group textarea {
+    font-size: 18px;
+    padding: 10px 10px 10px 5px;
+    display: block;
+    width: 300px;
+    border: none;
+    border-bottom: 1px solid #757575;
+    background-color: transparent;
+    resize: none;
+}
+.input-group input:focus, .input-group textarea:focus {
+    outline: none;
+}
+/* LABEL */
+.input-group label {
+    color: #999;
+    font-size: 18px;
+    font-weight: normal;
+    position: absolute;
+    pointer-events: none;
+    left: 5px;
+    top: 7px;
+    transition: 0.2s ease all;
+    -moz-transition: 0.2s ease all;
+    -webkit-transition: 0.2s ease all;
+}
+
+/* active state */
+.input-group input:focus ~ label, .input-group input:valid ~ label, .input-group textarea:focus ~ label, .input-group textarea:valid ~ label {
+    top: -15px;
+    font-size: 14px;
+    color: #1155BC;
+}
+
+/* BOTTOM BARS */
+.input-group .input-bar {
+    position: relative;
+    display: block;
+    width: 300px;
+}
+.input-group .input-bar:before, .input-group .input-bar:after 	{
+    content: '';
+    height: 2px;
+    width: 0;
+    bottom: 1px;
+    position: absolute;
+    background: #1155BC;
+    transition: 0.2s ease all;
+    -moz-transition: 0.2s ease all;
+    -webkit-transition: 0.2s ease all;
+}
+.input-group .input-bar:before {
+    left: 157.5px;
+}
+.input-group .input-bar:after {
+    right: 142.5px;
+}
+
+/* active state */
+.input-group input:focus ~ .input-bar:before, .input-group input:focus ~ .input-bar:after, .input-group textarea:focus ~ .input-bar:before, .input-group textarea:focus ~ .input-bar:after {
+    width: 157.5px;
+}
+
+/* HIGHLIGHTER */
+.input-group .input-highlight {
+    position: absolute;
+    height: 60%;
+    width: 100px;
+    top: 25%;
+    left: 0;
+    pointer-events: none;
+    opacity: 0.5;
+}

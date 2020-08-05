@@ -1,5 +1,13 @@
 # Rechnerverwaltung
-This is the web bases administration backend and client application API of PhilleConnect.
+This is the REST endpoint and the web based administration backend of PhilleConnect.
+Note: The client api moved to a separate repository.
 
-# How to use this?
-This requires a webserver with PHP and a MySQL/MariaDB server. To use the user account management, it requires a LDAP server. To use the internet access control, your network router must be an IPFire.
+# Backend
+Backend code is located in /api. It uses Python-Flask. Tested on Python 3.6 or later.
+
+# Frontend
+Frontend code is located in /ui. It uses Framework7 and Webpack. You'll need `nodejs` and `npm` for building and running the development setup.
+Useful commands:
+- Setup: `npm install`
+- Build: `npm run build-prod`
+- Run: `npm run start`

@@ -1,0 +1,548 @@
+<template>
+  <div class="page" data-name="Gruppe hinzufügen">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>GRUPPE</b>HINZUFÜGEN</p>
+    <p>Gurppen fassen beliebig viele Benutzer in einer Organisationseinheit zusammen. Es ist Möglich, bestimmte Aktionen auf allen Nutzern einer Gruppe durchzuführen, sowie einer Gruppe Berechtigungen zu geben. Die Gruppenmitgliedschaft eines Nutzern beeinflusst seine Zugriffsrechte.</p>
+    <div class="progress-container" id="progress">
+      <div class="progress-wrapper">
+        <div class="arrow-steps clearfix">
+          <div class="step current"><span>Name wählen</span></div>
+          <div class="step"><span>Berechtigungen wählen</span></div>
+          <div class="step"><span>Nutzerübernahme</span></div>
+          <div class="step"><span>Nutzer wählen</span></div>
+          <div class="step"><span>Fertigstellen</span></div>
+		    </div>
+      </div>
+    </div>
+    <div class="steps-content">
+      <div class="steps-content-box current" id="step-1">
+        <p>Bitte geben Sie einen Namen für die neue Gruppe ein.</p>
+        <div class="input-group">
+          <input type="text" id="group-name" required @input="existingCheck()">
+          <span class="input-bar"></span>
+          <label>Gruppenname</label>
+        </div>
+        <p id="group-existing"></p>
+        <br />
+        <p>Zur besseren Übersicht kann eine Beschreibung für die Gruppe vergeben werden.</p>
+        <div class="input-group">
+          <textarea id="group-info" required></textarea>
+          <span class="input-bar"></span>
+          <label>Gruppenbeschreibung</label>
+        </div>
+        <br />
+        <button @click="finish1()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-2">
+        <p>Bitte wählen Sie die Berechtigungen, die Mitglieder der Gruppe <span id="group-name-show"></span> innehaben sollen.</p>
+        <div class="select-tables">
+          <div class="select-table">
+            <p>Ausgewählte Berechtigungen</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Berechtigung</th>
+                    <th>Info</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="permissions-chosen"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="select-table select-table-right">
+            <p>Verfügbare Berechtigungen</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Berechtigung</th>
+                    <th>Info</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="permissions-available"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish2()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-3">
+        <p>Dieser Gruppe können direkt bei der Erstellung Nutzer zugewiesen werden. Dabei können die Nutzer aus der Nutzerliste ausgewählt werden. Es ist aber auch möglich, Nutzer aus anderen Gruppen zu übernehmen. Dabei werden die Nutzer nicht aus der bisherigen Gruppe gelöscht.</p>
+        <input type="radio" name="type" value="from-group" id="group-from-group"/>&nbsp;Nutzer dieser Gruppe aus einer / meheren Gruppe(n) übernehmen<br />
+        <input type="radio" name="type" value="from-list" id="group-from-list"/>&nbsp;Nutzer dieser Gruppe aus der Nutzerliste wählen oder leere Gruppe erstellen<br />
+        <button @click="back()">Zurück</button>
+        <button @click="finish3()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-4">
+        <div id="step-4-content">
+          <div id="step-4-from-group" class="nodisplay">
+            <p>Bitte diejenigen Gruppen auswählen, deren Nutzer in die neue Gruppe übernommen werden sollen. Die Nutzer bleiben dabei Mitglied der bisherige(n) Gruppe(n).</p>
+            <div class="select-tables">
+              <div class="select-table">
+                <p>Ausgewählte Gruppen (Nutzer werden übernommen)</p>
+                <div class="datagrid">
+                  <table id="groups-chosen-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Info</th>
+                        <th>Aktion</th>
+                      </tr>
+                    </thead>
+                    <tbody id="groups-chosen"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="select-table select-table-right">
+                <p>Verfügbare Gruppen</p>
+                <div class="datagrid">
+                  <table id="groups-available-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Info</th>
+                        <th>Aktion</th>
+                      </tr>
+                    </thead>
+                    <tbody id="groups-available"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="step-4-from-list" class="nodisplay">
+            <p>Bitte alle Nutzer auswählen, die der neuen Gruppe hinzugefügt werden sollen.</p>
+            <div class="select-tables">
+              <div class="select-table">
+                <p>Neue Mitglieder dieser Gruppe</p>
+                <div class="datagrid">
+                  <table id="users-chosen-table">
+                    <thead>
+                      <tr>
+                        <th>Nutzername</th>
+                        <th>Aktion</th>
+                      </tr>
+                    </thead>
+                    <tbody id="users-chosen"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="select-table select-table-right">
+                <p>Verfügbare Nutzer</p>
+                <div class="datagrid">
+                  <table id="users-available-table">
+                    <thead>
+                      <tr>
+                        <th>Nutzername</th>
+                        <th>Aktion</th>
+                      </tr>
+                    </thead>
+                    <tbody id="users-available"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish4()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-5">
+        <h3>Bitte überprüfen Sie ihre Eingaben.</h3>
+        <div class="two-col-container">
+          <div class="two-col-one">
+            <h3>Gruppendaten:</h3>
+            <p>Name: <span id="fin-name"></span></p>
+            <p>Infotext: <span id="fin-info"></span></p>
+            <h3>Berechtigungen:</h3>
+            <ul id="fin-permissions" class="fin-list"></ul>
+          </div>
+          <div class="two-col-two">
+            <h3 id="fin-users-headline"></h3>
+            <ul id="fin-users" class="fin-list"></ul>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish5()">Fertigstellen</button>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import progress from '../../js/progress.js';
+import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
+let existingGroups = null;
+let availablePermissions = [];
+let availableUsers = [];
+let selectedPermissions = [];
+let selectedGroups = [];
+let selectedUsers = [];
+let singleUserSelectionMode = false;
+let hasUsersSearch = null;
+let availableUsersSearch = null;
+let hasGroupsSearch = null;
+let availableGroupsSearch = null;
+export default {
+  methods: {
+    setup: function() {
+      progress.setup();
+      this.loadExistingGroups();
+      selectedPermissions = [];
+      selectedGroups = [];
+      selectedUsers = [];
+    },
+
+    // Step functions
+    finish1: function() {
+      this.loadAvailablePermissions();
+      if (document.getElementById("group-name").value == "") {
+        Swal.fire({
+          title: "Bitte Gruppenname vergeben.",
+          icon: "warning",
+        })
+      } else {
+        document.getElementById("group-name-show").innerHTML = document.getElementById("group-name").value;
+        progress.next();
+      }
+    },
+    finish2: function() {
+      progress.next();
+    },
+    finish3: function() {
+      if (document.getElementById("group-from-group").checked) {
+        singleUserSelectionMode = false;
+        document.getElementById("step-4-from-group").classList.remove("nodisplay");
+        document.getElementById("step-4-from-list").classList.add("nodisplay");
+        this.createGroupTable();
+        progress.next();
+      } else if (document.getElementById("group-from-list").checked) {
+        singleUserSelectionMode = true;
+        document.getElementById("step-4-from-group").classList.add("nodisplay");
+        document.getElementById("step-4-from-list").classList.remove("nodisplay");
+        this.loadUserList();
+        progress.next();
+      } else {
+        Swal.fire({
+          title: "Bitte Methode zur Nutzerübernahme wählen.",
+          icon: "warning",
+        })
+      }
+    },
+    finish4: function() {
+      this.createFinishView();
+      progress.next();
+    },
+    finish5: function() {
+      this.save();
+    },
+    back: function() {
+      progress.prev();
+    },
+    createFinishView: function() {
+      document.getElementById("fin-name").innerHTML = document.getElementById("group-name").value;
+      document.getElementById("fin-info").innerHTML = document.getElementById("group-info").value;
+      document.getElementById("fin-permissions").innerHTML = "";
+      for (const id of selectedPermissions) {
+        document.getElementById("fin-permissions").innerHTML += "<li><i class=\"f7-icons icon-inline\">chevron_right</i>&nbsp;&nbsp;" + this.getDetails(id, "name", availablePermissions) + "</li>";
+      }
+      document.getElementById("fin-users").innerHTML = "";
+      if (document.getElementById("group-from-group").checked) {
+        document.getElementById("fin-users-headline").innerHTML = "Nutzer dieser Gruppen werden übernommen:";
+        for (const id of selectedGroups) {
+          document.getElementById("fin-users").innerHTML += "<li><i class=\"f7-icons icon-inline\">chevron_right</i>&nbsp;&nbsp;" + this.getDetails(id, "name", existingGroups) + "</li>";
+        }
+      } else {
+        document.getElementById("fin-users-headline").innerHTML = "Gruppenmitglieder:";
+        for (const id of selectedUsers) {
+          document.getElementById("fin-users").innerHTML += "<li><i class=\"f7-icons icon-inline\">chevron_right</i>&nbsp;&nbsp;" + this.getDetails(id, "username", availableUsers) + "</li>";
+        }
+      }
+    },
+
+    // Data loading
+    loadExistingGroups: function() {
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        existingGroups = JSON.parse(response);
+      }.bind(this));
+    },
+    loadAvailablePermissions: function() {
+      api.send("/api/permissions", "GET", {}).then(function(response) {
+        availablePermissions = JSON.parse(response);
+        this.createPermissionTables();
+      }.bind(this));
+    },
+    loadUserList: function() {
+      api.send("/api/users", "GET", {}).then(function(response) {
+        availableUsers = JSON.parse(response);
+        this.createUserTable();
+      }.bind(this));
+    },
+
+    // Data printing
+    createPermissionTables: function() {
+      let selectedTable = "";
+      let availableTable = "";
+      let style = false;
+      for (const id of selectedPermissions) {
+        if (style) {
+          selectedTable += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          selectedTable += "<tr>";
+          style = true;
+        }
+        selectedTable += "<td>" + this.getDetails(id, "name", availablePermissions) + "</td><td>" + this.getDetails(id, "info", availablePermissions) + "</td><td><a href=\"#\" data-id=\"" + id + "\" class=\"delete-permission\"><i class=\"f7-icons icon-default\">minus_circle_fill</i></a></td></tr>";
+      }
+      style = false;
+      for (const permission of availablePermissions) {
+        if (selectedPermissions.indexOf(permission["id"]) < 0) {
+          if (style) {
+            availableTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            availableTable += "<tr>";
+            style = true;
+          }
+          availableTable += "<td>" + permission["name"] + "</td><td>" + permission["info"] + "</td><td><a href=\"#\" data-id=\"" + permission["id"] + "\" class=\"add-permission\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+        }
+      }
+      document.getElementById("permissions-chosen").innerHTML = (selectedTable != "") ? selectedTable : "Keine Berechtigungen gewählt.";
+      document.getElementById("permissions-available").innerHTML = (availableTable != "") ? availableTable : "Keine Berechtigungen verfügbar.";
+      for (const element of document.getElementsByClassName("add-permission")) {
+        element.addEventListener("click", function(e) {
+          this.addPermission(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-permission")) {
+        element.addEventListener("click", function(e) {
+          this.deletePermission(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+    },
+    createGroupTable: function() {
+      let selectedTable = "";
+      let availableTable = "";
+      let style = false;
+      for (const id of selectedGroups) {
+        if (style) {
+          selectedTable += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          selectedTable += "<tr>";
+          style = true;
+        }
+        selectedTable += "<td>" + this.getDetails(id, "name", existingGroups) + "</td><td>" + this.getDetails(id, "info", existingGroups) + "</td><td><a href=\"#\" data-id=\"" + id + "\" class=\"delete-group\"><i class=\"f7-icons icon-default\">minus_circle_fill</i></a></td></tr>";
+      }
+      style = false;
+      for (const group of existingGroups) {
+        if (selectedGroups.indexOf(group["id"]) < 0) {
+          if (style) {
+            availableTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            availableTable += "<tr>";
+            style = true;
+          }
+          availableTable += "<td>" + group["name"] + "</td><td>" + group["info"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-group\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+        }
+      }
+      document.getElementById("groups-chosen").innerHTML = (selectedTable != "") ? selectedTable : "Keine Gruppen ausgewählt.";
+      document.getElementById("groups-available").innerHTML = (availableTable != "") ? availableTable : "Keine Gruppen verfügbar.";
+      for (const element of document.getElementsByClassName("add-group")) {
+        element.addEventListener("click", function(e) {
+          this.addGroup(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-group")) {
+        element.addEventListener("click", function(e) {
+          this.deleteGroup(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+      this.loadGroupSearch();
+    },
+    createUserTable: function() {
+      let selectedTable = "";
+      let availableTable = "";
+      let style = false;
+      for (const id of selectedUsers) {
+        if (style) {
+          selectedTable += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          selectedTable += "<tr>";
+          style = true;
+        }
+        selectedTable += "<td>" + this.getDetails(id, "username", availableUsers) + "</td><td><a href=\"#\" data-id=\"" + id + "\" class=\"delete-user\"><i class=\"f7-icons icon-default\">minus_circle_fill</i></a></td></tr>";
+      }
+      style = false;
+      for (const user of availableUsers) {
+        if (selectedUsers.indexOf(user["id"]) < 0) {
+          if (style) {
+            availableTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            availableTable += "<tr>";
+            style = true;
+          }
+          availableTable += "<td>" + user["username"] + "</td><td><a href=\"#\" data-id=\"" + user["id"] + "\" class=\"add-user\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+        }
+      }
+      document.getElementById("users-chosen").innerHTML = (selectedTable != "") ? selectedTable : "Keine Nutzer ausgewählt.";
+      document.getElementById("users-available").innerHTML = (availableTable != "") ? availableTable : "Keine Nutzer verfügbar.";
+      for (const element of document.getElementsByClassName("add-user")) {
+        element.addEventListener("click", function(e) {
+          this.addUser(e.target.parentElement.dataset.id);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-user")) {
+        element.addEventListener("click", function(e) {
+          this.deleteUser(e.target.parentElement.dataset.id);
+        }.bind(this));
+      }
+      this.loadUserSearch();
+    },
+
+    // Data search
+    loadGroupSearch: function() {
+      if (hasGroupsSearch != null) {
+        hasGroupsSearch.disable();
+      }
+      hasGroupsSearch = new tableSearch("groups-chosen-table", {
+        col_2: "none",
+      });
+      if (availableGroupsSearch != null) {
+        availableGroupsSearch.disable();
+      }
+      availableGroupsSearch = new tableSearch("groups-available-table", {
+        col_2: "none",
+      });
+    },
+    loadUserSearch: function() {
+      if (hasUsersSearch != null) {
+        hasUsersSearch.disable();
+      }
+      hasUsersSearch = new tableSearch("users-chosen-table", {
+        col_1: "none",
+      });
+      if (availableUsersSearch != null) {
+        availableUsersSearch.disable();
+      }
+      availableUsersSearch = new tableSearch("users-available-table", {
+        col_1: "none",
+      });
+    },
+
+    // Data functions
+    evalPossibleNames: function(name) {
+      if (existingGroups != null) {
+        for (const group of existingGroups) {
+          if (group.name == name) {
+            return 1;
+          }
+        }
+        return 0;
+      } else {
+        return -1;
+      }
+    },
+    existingCheck: function() {
+      let test = this.evalPossibleNames(document.getElementById("group-name").value);
+      if (document.getElementById("group-name").value == "") {
+        document.getElementById("group-existing").innerHTML = "";
+      } else if (test == 0) {
+        document.getElementById("group-existing").style.color = "green";
+        document.getElementById("group-existing").innerHTML = "Gruppenname frei.";
+      } else if (test == -1) {
+        document.getElementById("group-existing").style.color = "blue";
+        document.getElementById("group-existing").innerHTML = "Fehler bei der Gruppennamenprüfung.";
+      } else {
+        document.getElementById("group-existing").style.color = "red";
+        document.getElementById("group-existing").innerHTML = "Dieser Gruppenname ist leider bereits vergeben.";
+      }
+    },
+    getDetails: function(id, type, array) {
+      for (const element of array) {
+        if (element["id"] == id) {
+          return element[type];
+        }
+      }
+      return "";
+    },
+
+    // Permission functions
+    addPermission: function(id) {
+      selectedPermissions.push(id);
+      this.createPermissionTables();
+    },
+    deletePermission: function(id) {
+      for (var i = 0; i < selectedPermissions.length; i++) {
+        if (selectedPermissions[i] == id) {
+          selectedPermissions.splice(i, 1);
+        }
+      }
+      this.createPermissionTables();
+    },
+
+    // Group functions
+    addGroup: function(id) {
+      selectedGroups.push(id);
+      this.createGroupTable();
+    },
+    deleteGroup: function(id) {
+      for (var i = 0; i < selectedGroups.length; i++) {
+        if (selectedGroups[i] == id) {
+          selectedGroups.splice(i, 1);
+        }
+      }
+      this.createGroupTable();
+    },
+
+    // User functions
+    addUser: function(id) {
+      selectedUsers.push(id);
+      this.createUserTable();
+    },
+    deleteUser: function(id) {
+      for (var i = 0; i < selectedUsers.length; i++) {
+        if (selectedUsers[i] == id) {
+          selectedUsers.splice(i, 1);
+        }
+      }
+      this.createUserTable();
+    },
+
+    // Data saving
+    save: function() {
+      let requestData = {
+        name: document.getElementById("group-name").value,
+        info: document.getElementById("group-info").value,
+        fromgroup: document.getElementById("group-from-group").checked,
+        type: 3,
+        users: JSON.stringify(selectedUsers),
+        source: JSON.stringify(selectedGroups),
+        permissions: JSON.stringify(selectedPermissions)
+      }
+      api.send("/api/group", "POST", requestData).then(function(response) {
+        Swal.fire({
+          title: "Gruppe erfolgreich hinzugefügt.",
+          icon: "success"
+        }).then(function() {
+          window.app.views.main.router.navigate("/groups");
+        })
+      });
+    },
+  },
+  on: {
+    pageInit: function() {
+      this.setup();
+    }
+  }
+};
+</script>

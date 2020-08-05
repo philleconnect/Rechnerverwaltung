@@ -1,0 +1,463 @@
+<template>
+  <div class="page" data-name="Account hinzufügen">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>ACCOUNT</b>ANLEGEN</p>
+    <div class="progress-container" id="progress">
+      <div class="progress-wrapper">
+        <div class="arrow-steps clearfix">
+          <div class="step current"><span>Nutzerdaten eingeben</span></div>
+          <div class="step"><span>Gruppenzuweisungen</span></div>
+          <div class="step"><span>Fertigstellen</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="steps-content">
+      <div class="steps-content-box current" id="step-1">
+        <p>Bitte geben Sie die Stammdaten für den neuen Account ein.</p>
+        <div class="two-col-container">
+          <div class="two-col-one">
+            <div class="input-group">
+              <input type="text" id="firstname" required @input="createUserName()"/>
+              <span class="input-bar"></span>
+              <label>Vorname</label>
+            </div>
+            <div class="input-group">
+              <input type="text" id="lastname" required @input="createUserName()"/>
+              <span class="input-bar"></span>
+              <label>Nachname</label>
+            </div>
+            <div class="input-group">
+              <input type="text" id="email" required/>
+              <span class="input-bar"></span>
+              <label>E-Mail Adresse</label>
+            </div>
+            <div class="input-group">
+              <input type="text" id="title" required/>
+              <span class="input-bar"></span>
+              <label>Titel</label>
+            </div>
+            <div class="input-group">
+              <input type="text" id="short" required/>
+              <span class="input-bar"></span>
+              <label>Kürzel</label>
+            </div>
+            <p>Nutzername (automatisch generiert):</p>
+            <p id="username-show"></p>
+            <p id="username-status" style="color: #1155BC;"></p>
+          </div>
+          <div class="two-col-two">
+            <p>Geschlecht: </p>
+            <select id="day"></select>
+            .
+            <select id="month">
+              <option value="01">Januar</option>
+              <option value="02">Februar</option>
+              <option value="03">März</option>
+              <option value="04">April</option>
+              <option value="05">Mai</option>
+              <option value="06">Juni</option>
+              <option value="07">Juli</option>
+              <option value="08">August</option>
+              <option value="09">September</option>
+              <option value="10">Oktober</option>
+              <option value="11">November</option>
+              <option value="12">Dezember</option>
+            </select>
+            .
+            <select id="year"></select>
+            <p></p>
+            <p>Geburtsdatum: </p>
+            <p></p><select id="sex"><option value="0">-</option><option value="1">männlich</option><option value="2">weiblich</option><option value="3">diverse</option></select>
+            <p></p>
+            <p>Passwort-Optionen:</p>
+            <input type="radio" value="auto" name="pwoptions" id="pwoptions-auto" @input="changePasswordMode()" checked/>&nbsp;Passwort automatisch vergeben (kann bis zur Änderung eingesehen werden)
+            <br />
+            <input type="radio" value="manual" name="pwoptions" id="pwoptions-manual" @input="changePasswordMode()"/>&nbsp;Eigenes Passwort vergeben (kann nicht eingesehen werden)
+            <br />
+            <div id="pw-auto">
+              <p>Automatisch generiertes Passwort:</p>
+              <input type="text" readonly id="auto-password"/>
+              <br />
+              <button @click="autoGeneratePassword(8)">Neues Passwort generieren</button>
+            </div>
+            <div id="pw-manual" class="nodisplay">
+              <p>Passwort manuell festlegen:</p>
+              <input type="password" id="manual-password-1" @input="verifyPasswords()"/>
+              <p>Passwort wiederholen:</p>
+              <input type="password" id="manual-password-2" @input="verifyPasswords()"/>
+              <p id="manual-password-info"></p>
+            </div>
+            <br />
+            <input type="checkbox" id="persistant" />&nbsp;Dauerhafter Nutzer
+            <p>Dauerhafte Nutzer bleiben beim Jahrgangsübergang erhalten, auch wenn sie nicht in den Importdaten enthalten sind. Dies ist z.B. für (externe) Administratoren, Sekretariate oder Hausmeister sinnvoll.</p>
+          </div>
+        </div>
+        <button @click="finish1()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-2">
+        <p>Bitte weisen Sie dem neuen Account beliebig viele Gruppen zu.</p>
+        <div class="select-tables">
+          <div class="select-table">
+            <p>Ausgewählte Gruppen mit Zugriffsrecht</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gruppe</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="groups-chosen"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="select-table select-table-right">
+            <p>Verfügbare Gruppen</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gruppe</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="groups-available"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish2()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-3">
+        <h3>Bitte überprüfen Sie ihre Eingaben.</h3>
+        <div class="two-col-container">
+          <div class="two-col-one">
+            <h3>Nutzerstammdaten:</h3>
+            <p>Vorname: <span id="fin-firstname"></span></p>
+            <p>Nachname: <span id="fin-lastname"></span></p>
+            <p>Nutzername: <span id="fin-username"></span></p>
+            <p>E-Mail Adresse: <span id="fin-email"></span></p>
+            <p>Titel: <span id="fin-title"></span></p>
+            <p>Kürzel: <span id="fin-short"></span></p>
+            <p>Geburtsdatum: <span id="fin-birthdate"></span></p>
+            <p>Geschlecht: <span id="fin-sex"></span></p>
+          </div>
+          <div class="two-col-two">
+            <h3>Gruppenzuweisungen:</h3>
+            <ul id="fin-groups" class="fin-list"></ul>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish3()">Account anlegen</button>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+import progress from '../../js/progress.js';
+import password from '../../js/password.js';
+import usernameChecker from '../../js/username.js';
+let existingGroups = null;
+let selectedGroups = [];
+let username = "";
+let existingUsers = null;
+export default {
+  methods: {
+    setup: function() {
+      progress.setup();
+      this.autoGeneratePassword(8);
+      this.loadExistingUsers();
+      selectedGroups = [];
+    },
+    // Data loading
+    loadExistingUsers: function() {
+      api.send("/api/users", "GET", {}).then(function(response) {
+        existingUsers = [];
+        for (const user of JSON.parse(response)) {
+          existingUsers.push(user["username"]);
+        }
+      });
+    },
+    loadExistingGroups: function() {
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        existingGroups = [];
+        for (const group of JSON.parse(response)) {
+          existingGroups.push({name:group["name"],id:group["id"]});
+        }
+        this.createGroupTable();
+      }.bind(this));
+    },
+
+    // Progress steps
+    finish1: function() {
+      this.loadExistingGroups();
+      if (document.getElementById("firstname").value == "") {
+        Swal.fire({
+          title: "Bitte Vornamen vergeben.",
+          icon: "warning",
+        })
+      } else if (document.getElementById("lastname").value == "") {
+        Swal.fire({
+          title: "Bitte Nachnamen vergeben.",
+          icon: "warning",
+        })
+      } else if (!document.getElementById("pwoptions-auto").checked && document.getElementById("manual-password-1").value == "" || document.getElementById("manual-password-1").value != document.getElementById("manual-password-2").value) {
+        Swal.fire({
+          title: "Bitte Passwort korrigieren.",
+          icon: "warning",
+        })
+      } else {
+        progress.next();
+      }
+    },
+    finish2: function() {
+      if (selectedGroups.length < 1) {
+        Swal.fire({
+          title: "Ohne Gruppe fortfahren?",
+          text: "Ein Account benötigt eine Gruppe, um Berechtigungen für Aktionen zu erhalten. Ohne eine Gruppe kann der Accountinhaber keine Aktionen ausführen.",
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: 'Trotzdem fortfahren',
+          cancelButtonText: 'Gruppen wählen',
+          confirmButtonColor: '#D33',
+          cancelButtonColor: "#3085d6",
+          preConfirm: function() {
+            return new Promise(function(resolve) {
+              progress.next();
+              this.createFinishView();
+              resolve();
+            }.bind(this))
+          }.bind(this)
+        })
+      } else {
+        progress.next();
+        this.createFinishView();
+      }
+    },
+    finish3: function() {
+      Swal.fire({
+        title: "Account anlegen...",
+        allowEscapeKey: false,
+        allowOutsideClick: false
+      })
+      Swal.showLoading();
+      this.save();
+    },
+    back: function() {
+      progress.prev();
+    },
+    createFinishView: function() {
+      document.getElementById("fin-firstname").innerHTML = document.getElementById("firstname").value;
+      document.getElementById("fin-lastname").innerHTML = document.getElementById("lastname").value;
+      document.getElementById("fin-username").innerHTML = username;
+      document.getElementById("fin-email").innerHTML = document.getElementById("email").value;
+      document.getElementById("fin-title").innerHTML = document.getElementById("title").value;
+      document.getElementById("fin-short").innerHTML = document.getElementById("short").value;
+      document.getElementById("fin-birthdate").innerHTML = document.getElementById("day").value + "." + document.getElementById("month").value + "." + document.getElementById("year").value;
+      switch(document.getElementById("sex").value) {
+        case "1":
+          document.getElementById("fin-sex").innerHTML = "männlich";
+          break;
+        case "2":
+          document.getElementById("fin-sex").innerHTML = "weiblich";
+          break;
+        case "3":
+          document.getElementById("fin-sex").innerHTML = "divers";
+          break;
+        case "0":
+          document.getElementById("fin-sex").innerHTML = "-";
+      }
+      document.getElementById("fin-groups").innerHTML = "";
+      for (const id of selectedGroups) {
+        document.getElementById("fin-groups").innerHTML += "<li><i class=\"f7-icons icon-inline\">chevron_right</i>&nbsp;&nbsp;" + this.getDetails(id, "name", existingGroups) + "</li>";
+      }
+    },
+
+    // Data writing
+    createGroupTable: function() {
+      let selectedTable = "";
+      let availableTable = "";
+      let style = false;
+      for (const id of selectedGroups) {
+        if (style) {
+          selectedTable += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          selectedTable += "<tr>";
+          style = true;
+        }
+        selectedTable += "<td>" + this.getDetails(id, "name", existingGroups) + "</td><td><a href=\"#\" data-id=\"" + id + "\" class=\"delete-group\"><i class=\"f7-icons icon-default\">multiply_circle_fill</i></a></td></tr>";
+      }
+      style = false;
+      for (const group of existingGroups) {
+        if (selectedGroups.indexOf(group["id"]) < 0) {
+          if (style) {
+            availableTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            availableTable += "<tr>";
+            style = true;
+          }
+          availableTable += "<td>" + group["name"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-group\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+        }
+      }
+      document.getElementById("groups-chosen").innerHTML = (selectedTable != "") ? selectedTable : "Keine Gruppe gewählt.";
+      document.getElementById("groups-available").innerHTML = (availableTable != "") ? availableTable : "Keine Gruppe verfügbar.";
+      for (const element of document.getElementsByClassName("add-group")) {
+        element.addEventListener("click", function(e) {
+          this.addGroup(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-group")) {
+        element.addEventListener("click", function(e) {
+          this.deleteGroup(parseInt(e.target.parentElement.dataset.id));
+        }.bind(this));
+      }
+    },
+
+    // Add / remove group
+    addGroup: function(id) {
+      selectedGroups.push(id);
+      this.createGroupTable();
+    },
+    deleteGroup: function(id) {
+      for (var i = 0; i < selectedGroups.length; i++) {
+        if (selectedGroups[i] == id) {
+          selectedGroups.splice(i, 1);
+        }
+      }
+      this.createGroupTable();
+    },
+
+    // Data functions
+    autoGeneratePassword: function(length) {
+      document.getElementById("auto-password").value = password.create(length);
+    },
+    getDetails: function(id, type, array) {
+      for (const element of array) {
+        if (element["id"] == id) {
+         return element[type];
+        }
+      }
+      return "";
+    },
+    createUserName: function() {
+      if (existingUsers == null) {
+        document.getElementById("username-status").innerHTML = "Fehler: Nutzernamenprüfung nicht möglich.";
+      } else {
+        document.getElementById("username-status").innerHTML = "";
+      }
+      let firstTry = usernameChecker.parse(document.getElementById("firstname").value, document.getElementById("lastname").value);
+      let count = 2;
+      let changed = false;
+      if (existingUsers != null) {
+        while (existingUsers.indexOf(firstTry) >= 0) {
+          changed = true;
+          if (count == 2) {
+            firstTry += "_" + count;
+          } else if (count > 10) {
+            firstTry = firstTry.substring(0, firstTry.length - 2) + count;
+          } else {
+            firstTry = firstTry.substring(0, firstTry.length - 1) + count;
+          }
+          count++;
+        }
+      }
+      username = firstTry;
+      document.getElementById("username-show").innerHTML = firstTry;
+      if (changed) {
+        document.getElementById("username-status").innerHTML = "Info: Der Nutzername wurde angepasst, um Namensgleichheit mit existierenden Nutzern zu vermeiden.";
+      }
+    },
+    changePasswordMode: function() {
+      if (document.getElementById("pwoptions-auto").checked) {
+        document.getElementById("pw-auto").classList.remove("nodisplay");
+        document.getElementById("pw-manual").classList.add("nodisplay");
+        this.autoGeneratePassword(8);
+      } else {
+        document.getElementById("pw-auto").classList.add("nodisplay");
+        document.getElementById("pw-manual").classList.remove("nodisplay");
+      }
+    },
+    verifyPasswords: function() {
+      if (document.getElementById("manual-password-1").value == "") {
+        document.getElementById("manual-password-info").innerHTML = "";
+        return 1;
+      } else if (document.getElementById("manual-password-1").value != document.getElementById("manual-password-2").value) {
+        document.getElementById("manual-password-info").innerHTML = "Passwörter stimmen nicht überein.";
+        document.getElementById("manual-password-info").style.color = "red";
+        return 2;
+      } else {
+        document.getElementById("manual-password-info").innerHTML = "Passwörter korrekt.";
+        document.getElementById("manual-password-info").style.color = "green";
+        return 0;
+      }
+    },
+
+    // Save new user
+    save: function() {
+      let requestdata = {
+        firstname: document.getElementById("firstname").value,
+        lastname: document.getElementById("lastname").value,
+        preferredname: document.getElementById("firstname").value + " " + document.getElementById("lastname").value,
+        title: document.getElementById("title").value,
+        short: document.getElementById("short").value,
+        email: document.getElementById("email").value,
+        birthdate: document.getElementById("year").value + "-" + document.getElementById("month").value + "-" + document.getElementById("day").value,
+        username: username,
+        groups: JSON.stringify(selectedGroups)
+      }
+      requestdata["persistant"] = document.getElementById("persistant").checked ? 1 : 0;
+      switch(document.getElementById("sex").value) {
+        case "1":
+          requestdata["sex"] = 1;
+          break;
+        case "2":
+          requestdata["sex"] = 2;
+          break;
+        case "3":
+          requestdata["sex"] = 3;
+          break;
+        case "0":
+          requestdata["sex"] = 0;
+      }
+      if (document.getElementById("pwoptions-auto").checked) {
+        requestdata["cleartext"] = true;
+        requestdata["password"] = document.getElementById("auto-password").value;
+        requestdata["password2"] = document.getElementById("auto-password").value;
+      } else {
+        requestdata["password"] = document.getElementById("manual-password-1").value;
+        requestdata["password2"] = document.getElementById("manual-password-2").value;
+      }
+      api.send("/api/user", "POST", requestdata).then(function(response) {
+        Swal.fire({
+          title: "Account erfolgreich hinzugefügt.",
+          icon: "success"
+        }).then(function() {
+          window.app.views.main.router.navigate("/users");
+        })
+      });
+    },
+  },
+  on: {
+    pageInit: function(e, page) {
+      let d = new Date();
+      for (let i = d.getFullYear(); i >= (d.getFullYear() - 110); i--) {
+        document.getElementById("year").innerHTML += '<option value="' + i + '">' + i + '</option>';
+      }
+      for (let i = 1; i < 32; i++) {
+        if (i < 10) {
+          document.getElementById("day").innerHTML += '<option value="0' + i + '">' + i + '</option>';
+        } else {
+          document.getElementById("day").innerHTML += '<option value="' + i + '">' + i + '</option>';
+        }
+      }
+      this.setup();
+    },
+  }
+};
+</script>

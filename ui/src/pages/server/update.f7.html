@@ -1,0 +1,164 @@
+<template>
+  <div class="page" data-name="Plugins">
+    <p style="font-family: Arial, sans-serif; font-size: 45px;"><b>PLUGIN</b>AKTUALISIEREN</p>
+    <p>Mit diesem Assistenten wird das Plugin "<span class="plugin-name"></span>" auf die Version <span class="plugin-version"></span> aktualisiert.</p>
+    <div class="progress-container" id="progress">
+      <div class="progress-wrapper">
+        <div class="arrow-steps clearfix">
+          <div class="step current"><span>Start</span></div>
+          <div class="step"><span>Einstellungen setzen</span></div>
+          <div class="step"><span>Plugin aktualisieren</span></div>
+		    </div>
+      </div>
+    </div>
+    <div class="steps-content">
+      <div class="steps-content-box current" id="step-1">
+        <p>Durch die Aktualisierung ist dieser Service für einige Zeit nicht verfügbar. Wir empfehlen dies zu zu Zeiten durchzuführen, zu denen keiner mit dem System arbeitet. Während der Aktualisierung bitte diese Seite nicht neu laden.</p>
+        <button @click="finish1()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-2">
+        <p class="nodisplay" id="no-settings-required">Für dieses Update müssen keine Einstellungen gesetzt werden.</p>
+        <div id="settings-required">
+          <p>Für dieses Update müssen einige Einstellungen gesetzt werden. Bitte setzen Sie die folgenden Einstellungen.</p>
+          <div class="datagrid">
+            <table id="envvars">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Information</th>
+                  <th>Wert</th>
+                </tr>
+              </thead>
+              <tbody id="content">
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <button @click="finish2()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-3">
+        <p>Das Plugin "<span class="plugin-name"></span>" wird jetzt aktualisiert. Dies kann einige Zeit dauern. Bitte unterbrechen Sie diesen Prozess nicht.</p>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import progress from '../../js/progress.js';
+import Swal from 'sweetalert2';
+let env = {};
+export default {
+  methods: {
+    // Data writing
+    writeTable: function() {
+      if (Object.keys(env).length > 0) {
+        let style = false;
+        let tableRow = "";
+        for (const key of Object.keys(env)) {
+          if (style) {
+            tableRow += "<tr class=\"alt\">";
+          } else {
+            tableRow += "<tr>";
+          }
+          style = !style;
+          tableRow += "<td>" + key + "</td><td>" + env[key].description + "</td><td><input type=\"text\" id=\"env-" + key + "\"/></td></tr>";
+        }
+        document.getElementById("content").innerHTML = tableRow;
+      } else {
+        document.getElementById("settings-required").classList.add("nodisplay");
+        document.getElementById("no-settings-required").classList.remove("nodisplay");
+      }
+    },
+
+    // Step functions
+    finish1: function() {
+      progress.next();
+      this.update();
+    },
+    finish2: function() {
+      if (Object.keys(env).length > 0) {
+        for (const key of Object.keys(env)) {
+          env[key]["value"] = document.getElementById("env-" + key).value;
+        }
+      }
+      this.update();
+    },
+    back: function() {
+      progress.prev();
+    },
+
+    // Update progress
+    update: function() {
+      api.send("/api/servermanager", "POST", {url: "/executeupdate", data: JSON.stringify({service: this.$route.params.name, version: this.$route.params.version})}).then(function(response) {
+        var response = JSON.parse(response);
+        if (response.error) {
+          Swal.fire({
+            title: "Es ist ein interner Fehler aufgetreten.",
+            text: "Bitte erneut versuchen. Der Fehlercode lautet '" + response.error + "'.",
+            icon: "error"
+          })
+        } else if (response.result == "running") {
+          progress.next();
+          Swal.fire({
+            title: "Aktualisierung läuft",
+            allowEscapeKey: false,
+            allowOutsideClick: false,
+            onOpen: function() {
+              Swal.showLoading();
+              this.pendingChecker();
+            }.bind(this)
+          })
+        } else {
+          env = response.result;
+          this.writeTable();
+        }
+      }.bind(this));
+    },
+    pendingChecker: function() {
+      api.send("/api/servermanager", "POST", {url: "/actionstatus", data: JSON.stringify({service: this.$route.params.name})}, true).then(function(response) {
+        if (response.status != 200) {
+          setTimeout(function() {this.pendingChecker();}.bind(this), 2000);
+        } else {
+          response = JSON.parse(response.responseText);
+          if (response.result == "updating") {
+            setTimeout(function() {this.pendingChecker();}.bind(this), 2000);
+          } else if (response.result == "running") {
+            Swal.fire({
+              title: "Service '" + this.$route.params.name + "' wurde erfolgreich aktualisiert.",
+              icon: "success"
+            }).then(function() {
+              window.app.views.main.router.navigate("/server");
+            })
+          } else if (response.result == "paused") {
+            Swal.fire({
+              title: "Service '" + this.$route.params.name + "' wurde erfolgreich aktualisiert.",
+              icon: "success"
+            }).then(() => {
+              window.app.views.main.router.navigate("/server");
+            })
+          } else {
+            Swal.fire({
+              title: "Es ist ein Fehler aufgetreten.",
+              text: "'" + this.$route.params.name  + "' konnte nicht aktualisiert werden.",
+              icon: "error"
+            })
+          }
+        }
+      }.bind(this))
+    }
+  },
+  on: {
+    pageInit: function() {
+      progress.setup();
+      for (const element of document.getElementsByClassName("plugin-name")) {
+        element.innerHTML = this.$route.params.name;
+      }
+      for (const element of document.getElementsByClassName("plugin-version")) {
+        element.innerHTML = this.$route.params.version;
+      }
+    }
+  }
+};
+</script>

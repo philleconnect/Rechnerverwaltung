@@ -1,0 +1,106 @@
+<template>
+  <div class="page">
+    <a href="#nav" class="nav-toggle">Menu</a>
+    <p style="font-family: Arial, sans-serif; font-size: 45px;"><b>ADMIN</b>MODUL</p>
+    <h4>Administratorkonto</h4>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <div class="input-group">
+          <input type="text" id="firstname" required/>
+          <span class="input-bar"></span>
+          <label>Vorname</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="lastname" required/>
+          <span class="input-bar"></span>
+          <label>Nachname</label>
+        </div>
+        <div class="input-group">
+          <input type="text" id="user" required autocorrect="off" autocapitalize="none"/>
+          <span class="input-bar"></span>
+          <label>Nutzername</label>
+        </div>
+      </div>
+      <div class="two-col-two">
+        <div class="input-group">
+          <input type="email" id="email" required/>
+          <span class="input-bar"></span>
+          <label>E-Mail Adresse</label>
+        </div>
+        <div class="input-group">
+          <input type="password" id="pwd" required @input="verifyPasswords"/>
+          <span class="input-bar"></span>
+          <label>Passwort</label>
+        </div>
+        <div class="input-group">
+          <input type="password" id="pwd2" required @input="verifyPasswords"/>
+          <span class="input-bar"></span>
+          <label>Passwort wiederholen</label>
+        </div>
+        <span id="passwordCheck"></span>
+      </div>
+    </div>
+    <button @click="setUp">>> Weiter</button>
+    <p>Dieser Schritt kann nicht übersprungen werden.</p>
+  </div>
+</template>
+<script>
+import Swal from 'sweetalert2';
+import api from '../../js/api.js';
+import errormsg from '../../js/errormessages.js';
+export default {
+  methods: {
+    verifyPasswords: function() {
+      if (document.getElementById('pwd').value === document.getElementById('pwd2').value) {
+        if (document.getElementById('pwd').value == '') {
+          document.getElementById('passwordCheck').innerHTML = '<p style="color: red;">Passwörter prüfen!</p>';
+          return false;
+        }
+        document.getElementById('passwordCheck').innerHTML = '<p style="color: green;">Passwörter identisch.</p>';
+        return true;
+      }
+      document.getElementById('passwordCheck').innerHTML = '<p style="color: red;">Passwörter prüfen!</p>';
+      return false;
+    },
+    setUp: function() {
+      let data = {
+        firstname: "Vorname",
+        lastname: "Nachname",
+        user: "Nutzername",
+        email: "E-Mail Adresse",
+        pwd: "Passwort"
+      }
+      for (let key in data) {
+        if (document.getElementById(key).value == "") {
+          Swal.fire({
+            title: "Bitte das Feld '" + data[key] + "' ausfüllen.",
+            icon: "warning"
+          })
+          return;
+        }
+      }
+      if (!this.verifyPasswords()) {
+        Swal.fire({
+          title: "Die Passwörter stimmen nicht überein.",
+          icon: "warning"
+        });
+        return;
+      }
+      let self = this;
+      api.send("/api/setup/admin", "POST", {
+        firstname: document.getElementById("firstname").value,
+        lastname: document.getElementById("lastname").value,
+        user: document.getElementById("user").value,
+        email: document.getElementById("email").value,
+        password: document.getElementById("pwd").value
+      }).then(function(response) {
+        if (response == "SUCCESS") {
+          window.location.reload();
+        } else {
+          errormsg.fire(response);
+        }
+      })
+    }
+  }
+};
+</script>

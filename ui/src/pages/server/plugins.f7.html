@@ -1,0 +1,69 @@
+<template>
+  <div class="page" data-name="Plugins">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>PLUGIN</b>STORE</p>
+    <p>Verfügbare SchoolConnect-Plugins:</p>
+    <div class="datagrid">
+      <table id="plugins">
+        <thead>
+          <tr>
+            <th>Plugin:</th>
+            <th>Beschreibung:</th>
+            <th>Lizenz:</th>
+            <th>Aktion:</th>
+          </tr>
+        </thead>
+        <tbody id="plugincontent"></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+let plugins = [];
+export default {
+  methods: {
+    // Data loading
+    loadAvailable: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/servermanager", "POST", {url: "/repo"}).then(function(response) {
+        plugins = JSON.parse(response);
+        this.writePluginTable();
+      }.bind(this));
+    },
+
+    // Data writing
+    writePluginTable: function() {
+      document.getElementById("plugincontent").innerHTML = "";
+      let style = false;
+      for (const plugin of plugins) {
+        if (style) {
+          var start = "<tr class=\"alt\">";
+        } else {
+          var start = "<tr>";
+        }
+        style = !style;
+        if (plugin.installed) {
+          var action = "Bereits installiert.";
+        } else {
+          var action = "<a href=\"#\" onclick=\"window.app.views.main.router.navigate('/server/plugins/install/" + plugin.name + "')\"><i class=\"f7-icons icon-default\">cloud_download_fill</i></a>";
+        }
+        if (plugin.subscription) {
+          var license = "Benötigt SchoolConnect Abbonement.";
+        } else {
+          var license = "Kostenlos (Open Source)";
+        }
+        document.getElementById("plugincontent").innerHTML += start + "<td>" + plugin.name + "</td><td>" + plugin.description + "</td><td>" + license + "</td><td>" + action + "</td></tr>";
+      }
+      preloader.toggle();
+    },
+  },
+  on: {
+    pageInit: function() {
+      this.loadAvailable();
+    }
+  }
+};
+</script>

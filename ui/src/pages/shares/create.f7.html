@@ -1,0 +1,446 @@
+<template>
+  <div class="page" data-name="Gruppenlaufwerk hinzufügen">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>GRUPPEN</b>LAUFWERKE</p>
+    <p>Mit diesem Tool lassen sich neue Gruppenlaufwerke anlegen. Ein neues Gruppenlaufwerk ist ein leerer Ordner. Es ist aber auch möglich, existierende Unterordner eines Gruppenlaufwerks freizugeben. So ist es z.B. möglich, in verschiedenen PC-Räumen verschiedene Ordner (Raum-Tausch), im Lehrerzimmer jedoch all diese Ordner mit nur einem Laufwerksbuchstaben freizugeben.</p>
+    <div class="progress-container" id="progress">
+      <div class="progress-wrapper">
+        <div class="arrow-steps clearfix">
+          <div class="step current"><span>Laufwerkstyp wählen</span></div>
+          <div class="step"><span>Ordner wählen</span></div>
+          <div class="step"><span>Rechte vergeben</span></div>
+          <div class="step"><span>Fertigstellen</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="steps-content">
+      <div class="steps-content-box current" id="step-1">
+        <input type="radio" name="type" value="new" id="new"/>&nbsp;Neuen leeren Ordner erzeugen<br />
+        <input type="radio" name="type" value="existing" id="existing"/>&nbsp;Existierenden Unterordner verwenden<br />
+        <button @click="finish1()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-2">
+        <div id="step-2-content">
+          <div id="step-2-new" class="nodisplay">
+            <p>Bitte geben Sie einen Namen für das neue Gruppenlaufwerk ein.</p>
+            <div class="input-group">
+              <input type="text" id="new-folder" required @input="existingCheckForNew()">
+              <span class="input-bar"></span>
+              <label>Laufwerksname</label>
+            </div>
+            <p id="new-folder-existing"></p>
+          </div>
+          <div id="step-2-subfolder" class="nodisplay">
+            <p>Bitte wählen Sie zunächst ein existierendes Basislaufwerk aus.</p>
+            <ul id="basedirs" class="fin-list"></ul>
+            <br />
+            <p>Anschließend bitte den Unterordner wählen, der freigegeben werden soll.</p>
+            <ul id="subdirs" class="fin-list"></ul>
+            <br />
+            <p>Ausgewählter Unterordner: <span id="subdir-selected"></span></p>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish2()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-3">
+        <h3>Berechtigungen vergeben</h3>
+        <p>Jedem Gruppenlaufwerk können beliebig viele Gruppen zugewiesen werden, welche schreibend oder lesend auf das Laufwerk zugreifen dürfen.</p>
+        <div class="select-tables">
+          <div class="select-table">
+            <p>Ausgewählte Gruppen mit Zugriffsrecht</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gruppe</th>
+                    <th>Schreiben</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="permissions-chosen"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="select-table select-table-right">
+            <p>Verfügbare Gruppen</p>
+            <div class="datagrid">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Gruppe</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody id="permissions-available"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <button @click="back()">Zurück</button>
+        <button @click="finish3()">Weiter</button>
+      </div>
+      <div class="steps-content-box disabled" id="step-4">
+        <h3>Eingaben überprüfen</h3>
+        <p>Es wird <span id="fin-type"></span> "<span id="fin-name"></span>" erstellt.</p>
+        <p>Laufwerkspfad: <span id="fin-path"></span></p>
+        <p>Berechtigungen für Gruppen:</p>
+        <div class="datagrid">
+          <table>
+            <thead>
+              <tr>
+                <th>Gruppe</th>
+                <th>Berechtigung</th>
+              </tr>
+            </thead>
+            <tbody id="fin-groups"></tbody>
+          </table>
+        </div>
+        <br />
+        <button @click="back()">Zurück</button>
+        <button @click="finish4()">Fertigstellen</button>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+import progress from '../../js/progress.js';
+let existingDrives = null;
+let availableGroups = null;
+let selectedGroups = [];
+let availableSubdirs = null;
+let selectedSubdir = "";
+let subdirName = "";
+export default {
+  methods: {
+    // Steps
+    setup: function() {
+      progress.setup();
+    },
+    finish1: function() {
+      this.loadExistingDrives();
+      if (document.getElementById("new").checked) {
+        document.getElementById("step-2-new").classList.remove("nodisplay");
+        document.getElementById("step-2-subfolder").classList.add("nodisplay");
+        progress.next();
+      } else if (document.getElementById("existing").checked) {
+        document.getElementById("step-2-new").classList.add("nodisplay");
+        document.getElementById("step-2-subfolder").classList.remove("nodisplay");
+        this.loadAvailableSubdirs();
+        progress.next();
+      } else {
+        Swal.fire({
+          title: "Bitte Laufwerkstyp auswählen.",
+          icon: "warning",
+        })
+      }
+    },
+    finish2: function() {
+      if (document.getElementById("new").checked) {
+        if (document.getElementById("new-folder").value == "") {
+          Swal.fire({
+            title: "Bitte Laufwerksnamen eingeben.",
+            icon: "warning"
+          })
+        } else if (this.evalPossibleNames(document.getElementById("new-folder").value) != 0) {
+          Swal.fire({
+            title: "Laufwerksname bereits vergeben.",
+            text: "Bitte geben Sie einen anderen Laufwerksnamen ein.",
+            icon: "warning"
+          })
+        } else {
+          this.loadAvailableGroups();
+          progress.next();
+        }
+      } else {
+        if (selectedSubdir == "") {
+          Swal.fire({
+            title: "Bitte Unterordner auswählen.",
+            icon: "warning"
+          })
+        } else {
+          this.loadAvailableGroups();
+          progress.next();
+        }
+      }
+    },
+    finish3: function() {
+      if (selectedGroups.length <= 0) {
+        Swal.fire({
+          title: "Ohne Gruppe fortfahren?",
+          text: "Ein Gruppenlaufwerk benötigt eine Gruppe, damit Nutzer auf das Laufwerk zugreifen können.",
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: 'Trotzdem fortfahren',
+          cancelButtonText: 'Gruppen wählen',
+          confirmButtonColor: '#D33',
+          cancelButtonColor: "#3085d6",
+          preConfirm: function() {
+            return new Promise(function(resolve) {
+              progress.next();
+              this.createFinishView();
+              resolve();
+            }.bind(this))
+          }.bind(this)
+        })
+      } else {
+        progress.next();
+        this.createFinishView();
+      }
+    },
+    finish4: function() {
+      this.save();
+    },
+    back: function() {
+      progress.prev();
+    },
+    createFinishView: function() {
+      if (document.getElementById("new").checked) {
+        document.getElementById("fin-type").innerHTML = "neues Gruppenlaufwerk";
+        document.getElementById("fin-name").innerHTML = document.getElementById("new-folder").value;
+        document.getElementById("fin-path").innerHTML = "/home/shares/" + document.getElementById("new-folder").value;
+      } else {
+        document.getElementById("fin-type").innerHTML = "bestehender Unterordner unter dem Namen";
+        document.getElementById("fin-name").innerHTML = subdirName;
+        document.getElementById("fin-path").innerHTML = "/home/shares/" + selectedSubdir;
+      }
+      let style = false;
+      let table = "";
+      document.getElementById("fin-groups").innerHTML = "";
+      for (const group of selectedGroups) {
+        if (style) {
+          table += "<tr class=\"alt\">";
+        } else {
+          table += "<tr>";
+        }
+        style = !style;
+        let write = "";
+        if (group["permission"] == 1) {
+          write = "<i class=\"f7-icons\" style=\"color: green;\">pencil</i>";
+        } else {
+          write = "<i class=\"f7-icons\" style=\"color: red;\">pencil_slash</i>";
+        }
+        table += "<td>" + this.getDetails(group["id"], "name", availableGroups) + "</td><td>" + write + "</td></tr>";
+      }
+      document.getElementById("fin-groups").innerHTML += (table != "") ? table : "Keine Zugriffsberechtigungen gewählt.";
+    },
+
+    // Data loading
+    loadExistingDrives: function() {
+      api.send("/api/shares", "GET", {}).then(function(response) {
+        existingDrives = [];
+        for (const shareObject of JSON.parse(response)) {
+          let root = false;
+          if (shareObject["path"].includes("/")) {
+            root = true;
+          }
+          existingDrives.push({root: root, name: shareObject["name"]});
+        }
+      }.bind(this));
+    },
+    loadAvailableGroups: function() {
+      api.send("/api/groups", "GET", {}).then(function(response) {
+        availableGroups = JSON.parse(response);
+        this.createGroupTable();
+      }.bind(this));
+    },
+    loadAvailableSubdirs: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/shares/subdirs", "GET", {}).then(function(response) {
+        preloader.toggle();
+        availableSubdirs = JSON.parse(response);
+        document.getElementById("basedirs").innerHTML = "";
+        for (const base of availableSubdirs) {
+          document.getElementById("basedirs").innerHTML += "<li><a href=\"#\" data-base=\"" + base["base"] + "\" class=\"basedir-selection-change\"><i class=\"f7-icons icon-inline icon-default\">chevron_right</i>&nbsp;&nbsp;" + base["base"] + "</a></li>";
+        }
+        if (document.getElementById("basedirs").innerHTML == "") {
+          document.getElementById("basedirs").innerHTML = "Keine Gruppenlaufwerke vorhanden.";
+        }
+        for (const element of document.getElementsByClassName("basedir-selection-change")) {
+          element.addEventListener("click", function(e) {
+            this.basedirSelectionChange(e.target.dataset.base);
+          }.bind(this));
+        }
+      }.bind(this));
+    },
+
+    // Data printing
+    createGroupTable: function() {
+      let selectedTable = "";
+      let availableTable = "";
+      let style = false;
+      for (const group of selectedGroups) {
+        if (style) {
+          selectedTable += "<tr class=\"alt\">";
+          style = false;
+        } else {
+          selectedTable += "<tr>";
+          style = true;
+        }
+        let write = "";
+        let writeButton = "";
+        if (group["permission"] > 0) {
+          write = "<i class=\"f7-icons\" style=\"color: green;\">checkmark_circle_fill</i>";
+          writeButton = "<a href=\"#\" data-id=\"" + group["id"] + "\" class=\"write-share-readonly\"><i class=\"f7-icons\" style=\"color: red;\">pencil_slash</i></a>";
+        } else {
+          writeButton = "<a href=\"#\" data-id=\"" + group["id"] + "\" class=\"write-share-writeable\"><i class=\"f7-icons\" style=\"color: green;\">pencil</i></a>";
+        }
+        selectedTable += "<td>" + this.getDetails(group["id"], "name", availableGroups) + "</td><td>" + write + "</td><td>" + writeButton + "&nbsp;&nbsp;&nbsp;<a href=\"#\" data-id=\"" + group["id"] + "\" class=\"delete-group\"><i class=\"f7-icons icon-default\">minus_circle_fill</i></a></td></tr>";
+      }
+      style = false;
+      for (const group of availableGroups) {
+        if (!this.groupIsSelected(group["id"])) {
+          if (style) {
+            availableTable += "<tr class=\"alt\">";
+            style = false;
+          } else {
+            availableTable += "<tr>";
+            style = true;
+          }
+          availableTable += "<td>" + group["name"] + "</td><td><a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-group-writeable\"><i class=\"f7-icons\" style=\"color: green;\">pencil</i></a>&nbsp;&nbsp;&nbsp;<a href=\"#\" data-id=\"" + group["id"] + "\" class=\"add-group-readonly\"><i class=\"f7-icons\" style=\"color: red;\">pencil_slash</i></a></td></tr>";
+        }
+      }
+      document.getElementById("permissions-chosen").innerHTML = (selectedTable != "") ? selectedTable : "Keine Zugriffsberechtigungen vergeben.";
+      document.getElementById("permissions-available").innerHTML = (availableTable != "") ? availableTable : "Keine Gruppen verfügbar.";
+      for (const element of document.getElementsByClassName("write-share-readonly")) {
+        element.addEventListener("click", function(e) {
+          this.write(parseInt(e.target.parentElement.dataset.id), 0);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("write-share-writeable")) {
+        element.addEventListener("click", function(e) {
+          this.write(parseInt(e.target.parentElement.dataset.id), 1);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("add-group-readonly")) {
+        element.addEventListener("click", function(e) {
+          this.addGroup(parseInt(e.target.parentElement.dataset.id), 0);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("add-group-writeable")) {
+        element.addEventListener("click", function(e) {
+          this.addGroup(parseInt(e.target.parentElement.dataset.id), 1);
+        }.bind(this));
+      }
+      for (const element of document.getElementsByClassName("delete-group")) {
+        element.addEventListener("click", function(e) {
+          this.deleteGroup(parseInt(e.target.parentElement.dataset.id), 1);
+        }.bind(this));
+      }
+    },
+    write: function(id, permission) {
+      for (const group of selectedGroups) {
+        if (group["id"] == id) {
+          group["permission"] = permission;
+        }
+      }
+      this.createGroupTable();
+    },
+
+    // Data functions
+    evalPossibleNames: function(name) {
+      if (existingDrives != null) {
+        for (const share of existingDrives) {
+          if (share.name == name) {
+            return 1;
+          }
+        }
+        return 0;
+      } else {
+        return -1;
+      }
+    },
+    existingCheckForNew: function() {
+      let test = this.evalPossibleNames(document.getElementById("new-folder").value);
+      if (test == 0) {
+        document.getElementById("new-folder-existing").style.color = "green";
+        document.getElementById("new-folder-existing").innerHTML = "Ordnername frei.";
+      } else if (test == -1) {
+        document.getElementById("new-folder-existing").style.color = "blue";
+        document.getElementById("new-folder-existing").innerHTML = "Fehler bei der Ordnernamenprüfung.";
+      } else {
+        document.getElementById("new-folder-existing").style.color = "red";
+        document.getElementById("new-folder-existing").innerHTML = "Dieser Ordnername ist leider bereits vergeben.";
+      }
+    },
+    groupIsSelected: function(id) {
+      for (const group of selectedGroups) {
+        if (group["id"] == id) {
+          return true;
+        }
+      }
+      return false;
+    },
+    getDetails: function(id, type, array) {
+      for (const element of array) {
+        if (element["id"] == id) {
+         return element[type];
+        }
+      }
+      return "";
+    },
+    basedirSelectionChange: function(name) {
+      console.log(name);
+      document.getElementById("subdirs").innerHTML = "";
+      for (const base of availableSubdirs) {
+        if (base["base"] == name) {
+          for (const sub of base["sub"]) {
+            document.getElementById("subdirs").innerHTML += "<li><a href=\"#\" data-base=\"" + base["base"] + "\" data-sub=\"" + sub + "\" class=\"subdir-selection-change\"><i class=\"f7-icons icon-inline icon-default\">chevron_right</i>&nbsp;&nbsp;" + sub + "</a></li>";
+          }
+        }
+      }
+      if (document.getElementById("subdirs").innerHTML == "") {
+        document.getElementById("subdirs").innerHTML = "Keine Unterordner vorhanden.";
+      }
+      for (const element of document.getElementsByClassName("subdir-selection-change")) {
+        element.addEventListener("click", function(e) {
+          this.subdirSelectionChange(e.target.dataset.base, e.target.dataset.sub);
+        }.bind(this));
+      }
+    },
+    subdirSelectionChange: function(base, name) {
+      subdirName = name;
+      selectedSubdir = base + "/" + name;
+      document.getElementById("subdir-selected").innerHTML = selectedSubdir;
+    },
+
+    // Group functions
+    addGroup: function(id, permission) {
+      selectedGroups.push({id:id,permission:permission});
+      this.createGroupTable();
+    },
+    deleteGroup: function(id) {
+      for (let i = 0; i < selectedGroups.length; i++) {
+        selectedGroups.splice(i, 1);
+      }
+      this.createGroupTable();
+    },
+
+    // Data save
+    save: function() {
+      let requestdata = {
+        isSubshare: document.getElementById("existing").checked,
+        name: document.getElementById("new").checked ? document.getElementById("new-folder").value : subdirName,
+        path: document.getElementById("new").checked ? "/home/shares/" + document.getElementById("new-folder").value : "/home/shares/" + selectedSubdir,
+        group: JSON.stringify(selectedGroups),
+      }
+      api.send("/api/share", "POST", requestdata).then(function(response) {
+        Swal.fire({
+          title: "Gruppenlaufwerk erfolgreich hinzugefügt.",
+          icon: "success"
+        }).then(function() {
+          window.app.views.main.router.navigate("/shares");
+        })
+      }.bind(this));
+    },
+  },
+  on: {
+    pageInit: function() {
+      this.setup();
+    }
+  }
+};
+</script>

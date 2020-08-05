@@ -1,0 +1,154 @@
+<template>
+  <div class="page" data-name="Geräte">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>GERÄT</b>BEARBEITEN</p>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <div class="input-group">
+          <input type="text" id="name" required/>
+          <span class="input-bar"></span>
+          <label>Name</label>
+        </div>
+        <br />
+        <div class="input-group">
+          <input type="text" id="room" required/>
+          <span class="input-bar"></span>
+          <label>Raum</label>
+        </div>
+        <br />
+        <div class="input-group">
+          <textarea id="comment" required></textarea>
+          <span class="input-bar"></span>
+          <label>Gerätebeschreibung</label>
+        </div>
+        <br />
+        <p>Konfigurationsprofil:</p>
+        <select id="profile"></select>
+      </div>
+      <div class="two-col-two">
+        <h3>Geräteinformationen:</h3>
+        <p>Registrierungszeitpunkt: <span id="registered"></span></p>
+        <p>MAC-Adresse: <span id="address"></span></p>
+        <p>IPv4-Adresse: <span id="ipv4"></span></p>
+        <p>IPv6-Adresse: <span id="ipv6"></span></p>
+        <p>Geräteinhaber: <span id="owner"></span></p>
+      </div>
+    </div>
+    <button @click="load()">Zurücksetzen</button>
+    <button @click="save()">Änderungen speichern</button>
+    <p>Aktivitätsprotokoll für dieses Gerät:</p>
+    <div class="datagrid">
+      <table>
+        <thead>
+          <tr>
+            <th>Benutzer</th>
+            <th>Zeitpunkt</th>
+            <th>Aktion</th>
+            <th>Ziel</th>
+          </tr>
+        </thead>
+        <tbody id="activitylog"></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+let device = null;
+let profiles = [];
+let users = [];
+export default {
+  methods: {
+    // Data loading
+    loadUsers: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/users", "GET", {}).then(function(response) {
+        users = JSON.parse(response);
+        this.loadProfiles();
+      }.bind(this));
+    },
+    loadProfiles: function() {
+      api.send("/api/profiles", "GET", {}).then(function(response) {
+        profiles = JSON.parse(response);
+        this.load();
+      }.bind(this));
+    },
+    load: function() {
+      api.send("/api/device/" + this.$route.params.id, "GET", {}).then(function(response) {
+        preloader.hide();
+        device = JSON.parse(response);
+        document.getElementById("name").value = device["name"];
+        document.getElementById("room").value = device["room"];
+        document.getElementById("comment").value = (device["comment"] == null) ? "" : device["comment"];
+        document.getElementById("ipv4").innerHTML = (device["ipv4"] == null) ? "Nicht vorhanden." : device["ipv4"];
+        document.getElementById("ipv6").innerHTML = (device["ipv6"] == null) ? "Nicht vorhanden." : device["ipv6"];
+        document.getElementById("address").innerHTML = (device["address"] == null) ? "Nicht vorhanden." : device["address"];
+        document.getElementById("registered").innerHTML = (device["registered"] == null) ? "Nicht vorhanden." : device["registered"];
+        document.getElementById("owner").innerHTML = (device["people_id"] == null) ? "Kein persönliches Gerät." : this.getNameById(device["people_id"]);
+        this.writeProfiles();
+        this.writeLog();
+      }.bind(this));
+    },
+
+    // Data writing
+    writeProfiles: function() {
+      document.getElementById("profile").innerHTML = "";
+      for (const profile of profiles) {
+        let selected = profile["id"] == device["devprofile"] ? "selected" : "";
+        document.getElementById("profile").innerHTML += "<option value=\"" + profile["id"] + "\" " + selected + ">" + profile["name"] + "</option>";
+      }
+    },
+    writeLog: function() {
+      var tableContent = "";
+      let style = false;
+      for (const log of device["logins"]) {
+        if (style) {
+          tableContent += "<tr class=\"alt\">";
+        } else {
+          tableContent += "<tr>";
+        }
+        style = !style;
+        let affected = (log["affected"] == null) ? "-" : this.getNameById(log["affected"]);
+        tableContent += "<td>" + this.getNameById(log["people_id"]) + "</td><td>" + essentials.niceifyTimestamp(log["timestamp"]) + "</td><td>" + essentials.getLogText(log["type"], log["info"]) + "</td><td>" + affected + "</td></tr>";
+      }
+      document.getElementById("activitylog").innerHTML = (tableContent == "") ? "Keine Ereignisse vorhanden." : tableContent;
+    },
+
+    // Helpers
+    getNameById: function(id) {
+      for (const user of users) {
+        if (user["id"] == id) {
+          return user["firstname"] + " " + user["lastname"];
+        }
+      }
+      return id;
+    },
+
+    // Data saving
+    save: function() {
+      device["name"] = document.getElementById("name").value;
+      device["room"] = document.getElementById("room").value;
+      device["comment"] = document.getElementById("comment").value;
+      device["devprofile"] = document.getElementById("profile").value;
+      api.send("/api/device/" + this.$route.params.id, "PUT", device).then(function(response) {
+        Swal.fire({
+          title: "Änderungen erfolgreich gespeichert.",
+          icon: "success",
+        }).then(function() {
+          window.app.views.main.router.navigate("/devices");
+        })
+      });
+    }
+  },
+  on: {
+    pageInit: function() {
+      profiles = [];
+      users = [];
+      device = null;
+      this.loadUsers();
+    }
+  }
+};
+</script>

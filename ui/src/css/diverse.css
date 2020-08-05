@@ -1,0 +1,70 @@
+/*
+ Diverse CSS for all types of pages for SchoolConnect Backend
+ */
+
+/* fix sweetalert 2 title center align */
+.swal2-title {
+    display: block !important;
+}
+
+/* new share ui */
+.select-tables {
+    width: 100%;
+    float: left;
+}
+.select-table {
+    float: left;
+    width: calc(50% - 7px);
+}
+.select-table-right {
+    margin-left: 10px;
+}
+
+/* steps ui */
+.steps-content {
+    max-width: 100%;
+    min-width: 75%;
+}
+
+/* two column ui */
+.two-col-container {
+    width: 100%;
+    float: left;
+}
+.two-col-one {
+    width: calc(50% - 10px);
+    float: left;
+    margin-bottom: 10px;
+}
+.two-col-two {
+    width: calc(50% - 10px);
+    float: left;
+    margin-left: 15px;
+    margin-bottom: 10px;
+}
+
+/* icon color */
+.icon-default {
+    color: #1155BC;
+}
+
+/* Finish view lists */
+.fin-list {
+    list-style-type: none;
+}
+.icon-inline {
+    font-size: 15px !important;
+}
+
+/* f7-icon before header */
+.standalone-container {
+    margin-bottom: 10px;
+    display: flex;
+}
+.standalone-icon {
+    margin-right: 10px;
+}
+.standalone-icon-headline {
+    margin: 0px;
+    margin-top: 2px;
+}

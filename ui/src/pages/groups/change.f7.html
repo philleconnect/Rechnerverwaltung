@@ -1,0 +1,272 @@
+<template>
+  <div class="page" data-name="Gruppen">
+    <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>GRUPPE</b>BEARBEITEN</p>
+    <p>Gruppe: <span class="groupname"></span></p>
+    <p>Änderungen auf dieser Seite werden sofort gespeichert.</p>
+    <h3>Berechtigungen</h3>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <p>Berechtigungen von <span class="groupname"></span></p>
+        <div class="datagrid">
+          <table id="has-permissions-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="has-permissions"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="two-col-two">
+        <p>Verfügbare Berechtigungen</p>
+        <div class="datagrid">
+          <table id="available-permissions-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="available-permissions"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <h3>Gruppenmitgliedschaften</h3>
+    <div class="two-col-container">
+      <div class="two-col-one">
+        <p>Mitglieder von <span class="groupname"></span></p>
+        <div class="datagrid">
+          <table id="has-users-table">
+            <thead>
+              <tr>
+                <th>Nutzername</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="users-chosen"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="two-col-two">
+        <p>Restliche Nutzer</p>
+        <div class="datagrid">
+          <table id="available-users-table">
+            <thead>
+              <tr>
+                <th>Nutzername</th>
+                <th>Aktion</th>
+              </tr>
+            </thead>
+            <tbody id="users-available"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+import api from '../../js/api.js';
+import preloader from '../../js/preloader.js';
+import essentials from '../../js/essentials.js';
+import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
+let group = [];
+let permissions = [];
+let users = [];
+let hasUsersSearch = null;
+let availableUsersSearch = null;
+let hasPermissionSerach = null;
+let availablePermissionSearch = null;
+export default {
+  methods: {
+    // Data loading
+    load: function() {
+      api.send("/api/group/" + this.$route.params.id, "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        group = response;
+        for (const el of document.getElementsByClassName("groupname")) {
+          el.innerHTML = response.name;
+        }
+        this.loadUsers();
+        this.loadPermissions();
+      }.bind(this));
+    },
+    loadUsers: function() {
+      api.send("/api/users", "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        users = response;
+        let hasStyle = false;
+        let availableStyle = false;
+        let hasUsersTable = "";
+        let availableUsersTable = "";
+        for (const user of response) {
+          if (this.groupHasUser(user["id"])) {
+            if (hasStyle) {
+              hasUsersTable += "<tr class=\"alt\">";
+              hasStyle = false;
+            } else {
+              hasUsersTable += "<tr>";
+              hasStyle = true;
+            }
+            hasUsersTable += "<td>" + user["username"] + "</td><td><a href=\"#\" data-id=\"" + user["id"] + "\" class=\"delete-user\"><i class=\"f7-icons icon-default\">minus_circle_fill</i></a></td></tr>";
+          } else {
+            if (availableStyle) {
+              availableUsersTable += "<tr class=\"alt\">";
+              availableStyle = false;
+            } else {
+              availableUsersTable += "<tr>";
+              availableStyle = true;
+            }
+            availableUsersTable += "<td>" + user["username"] + "</td><td><a href=\"#\" data-id=\"" + user["id"] + "\" class=\"add-user\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+          }
+        }
+        document.getElementById("users-chosen").innerHTML = (hasUsersTable != "") ? hasUsersTable : "Keine Gruppenmitglieder vorhanden.";
+        document.getElementById("users-available").innerHTML = (availableUsersTable != "") ? availableUsersTable : "Keine Nutzer vorhanden.";
+        for (const element of document.getElementsByClassName("add-user")) {
+          element.addEventListener("click", function(e) {
+            this.addUser(e.target.parentElement.dataset.id);
+          }.bind(this));
+        }
+        for (const element of document.getElementsByClassName("delete-user")) {
+          element.addEventListener("click", function(e) {
+            this.deleteUser(e.target.parentElement.dataset.id);
+          }.bind(this));
+        }
+        this.loadUserSearch();
+      }.bind(this));
+    },
+    loadPermissions: function() {
+      api.send("/api/permissions", "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        permissions = response;
+        let hasStyle = false;
+        let availableStyle = false;
+        let hasPermissionsTable = "";
+        let availablePermissionsTable = "";
+        for (const permission of response) {
+          if (this.groupHasPermission(permission["id"])) {
+            if (hasStyle) {
+              hasPermissionsTable += "<tr class=\"alt\">";
+              hasStyle = false;
+            } else {
+              hasPermissionsTable += "<tr>";
+              hasStyle = true;
+            }
+            hasPermissionsTable += "<td>" + permission["name"] + "</td><td><a href=\"#\" data-id=\"" + permission["id"] + "\" class=\"delete-permission\"><i class=\"f7-icons icon-default\">minus_circle_fill</i></a></td></tr>";
+          } else {
+            if (availableStyle) {
+              availablePermissionsTable += "<tr class=\"alt\">";
+              availableStyle = false;
+            } else {
+              availablePermissionsTable += "<tr>";
+              availableStyle = true;
+            }
+            availablePermissionsTable += "<td>" + permission["name"] + "</td><td><a href=\"#\" data-id=\"" + permission["id"] + "\" class=\"add-permission\"><i class=\"f7-icons icon-default\">plus_circle_fill</i></a></td></tr>";
+          }
+        }
+        document.getElementById("has-permissions").innerHTML = (hasPermissionsTable != "") ? hasPermissionsTable : "Diese Gruppe besitzt keine Berechtigungen.";
+        document.getElementById("available-permissions").innerHTML = (availablePermissionsTable != "") ? availablePermissionsTable : "Keine Berechtigungen vorhanden.";
+        for (const element of document.getElementsByClassName("add-permission")) {
+          element.addEventListener("click", function(e) {
+            this.addPermission(parseInt(e.target.parentElement.dataset.id));
+          }.bind(this));
+        }
+        for (const element of document.getElementsByClassName("delete-permission")) {
+          element.addEventListener("click", function(e) {
+            this.deletePermission(parseInt(e.target.parentElement.dataset.id));
+          }.bind(this));
+        }
+        this.loadPermissionSearch();
+      }.bind(this));
+    },
+
+    // Data functions
+    groupHasUser: function(id) {
+      for (const user of group.users) {
+        if (user == id) {
+          return true;
+        }
+      }
+      return false;
+    },
+    groupHasPermission: function(id) {
+      for (const permission of group.permissions) {
+        if (permission == id) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    // Data search
+    loadUserSearch: function() {
+      if (hasUsersSearch != null) {
+        hasUsersSearch.disable();
+      }
+      hasUsersSearch = new tableSearch("has-users-table", {
+        col_1: "none",
+      });
+      if (availableUsersSearch != null) {
+        availableUsersSearch.disable();
+      }
+      availableUsersSearch = new tableSearch("available-users-table", {
+        col_1: "none",
+      });
+    },
+    loadPermissionSearch: function() {
+      if (hasPermissionSerach != null) {
+        hasPermissionSerach.disable();
+      }
+      hasPermissionSerach = new tableSearch("has-permissions-table", {
+        col_1: "none",
+      });
+      if (availablePermissionSearch != null) {
+        availablePermissionSearch.disable();
+      }
+      availablePermissionSearch = new tableSearch("available-permissions-table", {
+        col_1: "none",
+      });
+    },
+
+    // User functions
+    addUser: function(id) {
+      preloader.toggle("SPEICHERN");
+      api.send("/api/group/" + this.$route.params.id + "/user/" + id, "POST", {}).then(function(response) {
+        preloader.toggle();
+        this.load();
+      }.bind(this));
+    },
+    deleteUser: function(id) {
+      preloader.toggle("SPEICHERN");
+      api.send("/api/group/" + this.$route.params.id + "/user/" + id, "DELETE", {}).then(function(response) {
+        preloader.toggle();
+        this.load();
+      }.bind(this));
+    },
+
+    // Permission functions
+    addPermission: function(id) {
+      preloader.toggle("SPEICHERN");
+      api.send("/api/permission/" + id + "/group/" + this.$route.params.id, "POST", {}).then(function(response) {
+        preloader.toggle();
+        this.load();
+      }.bind(this));
+    },
+    deletePermission: function(id) {
+      preloader.toggle("SPEICHERN");
+      api.send("/api/permission/" + id + "/group/" + this.$route.params.id, "DELETE", {}).then(function(response) {
+        preloader.toggle();
+        this.load();
+      }.bind(this));
+    },
+  },
+  on: {
+    pageInit: function() {
+      this.load();
+    }
+  }
+};
+</script>

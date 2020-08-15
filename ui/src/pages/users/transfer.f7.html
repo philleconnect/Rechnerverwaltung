@@ -191,9 +191,10 @@ let usersToChangeLength = 0;
 export default {
   methods: {
     // Data loading
-    loadUsers: function() {
+    loadUsers: function(cb) {
       api.send("/api/users", "GET", {}).then(function(response) {
         existingUsers = JSON.parse(response);
+        if (cb != null) cb();
       });
     },
     loadGroups: function(cb) {
@@ -261,7 +262,6 @@ export default {
       setTimeout(function() {
         this.createGroups();
       }.bind(this), 50)
-      this.createTransferView();
     },
     finish4: function() {
       Swal.fire({
@@ -275,7 +275,6 @@ export default {
       setTimeout(function() {
         this.changeUsers();
       }.bind(this), 50)
-      this.loadEmptyGroups();
     },
     finish5: function() {
       Swal.mixin({
@@ -447,7 +446,7 @@ export default {
             exists = true;
           }
         }
-        if (!exists) {
+        if (!exists && group != "") {
           groupsToCreate.push({name: group, status: 0});
         }
       }
@@ -463,10 +462,10 @@ export default {
             }
             for (const group of user.groups) {
               let gid = this.getGroupId(group);
-              if (gid < 0) {
-                u.groups.push(group);
+              if (gid < 0 && group != "") {
+                u.groups.push(group); // Group is new, we only have a name. Add it and replace it later after group creation.
               } else {
-                u.groups.push(gid);
+                u.groups.push(gid); // Group is older and we already have an ID.
               }
             }
             usersToChange.push(u);
@@ -489,7 +488,7 @@ export default {
           }
           for (const group of user.groups) {
             let gid = this.getGroupId(group);
-            if (gid < 0) {
+            if (gid < 0 && group != "") {
               u.groups.push(group);
             } else {
               u.groups.push(gid);
@@ -616,6 +615,7 @@ export default {
         }, 50);
       })
       this.fixGroups();
+      this.createTransferView(); // Create view here because new groups are loaded now
       let usersCreated = 0;
       for (const user of usersToCreate) {
         if (user.willCreate) {
@@ -664,6 +664,10 @@ export default {
             }.bind(this));
           }
         }
+      }
+      if (usersToChange.length == 0) {
+        Swal.close();
+        progress.next();
       }
     },
 
@@ -743,9 +747,13 @@ export default {
     finalizeUserChange: function() {
       document.getElementById("popup-text").innerHTML = usersChanged + " von " + usersToChangeLength;
       if (usersChanged >= usersToChangeLength) {
-        Swal.close();
-        progress.next();
+        this.loadUsers(this.changeAfterReload);
       }
+    },
+    changeAfterReload: function() {
+      this.loadEmptyGroups();
+      Swal.close();
+      progress.next();
     },
 
     // Deleting

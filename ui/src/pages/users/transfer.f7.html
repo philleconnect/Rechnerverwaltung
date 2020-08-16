@@ -420,7 +420,7 @@ export default {
     },
 
     // Data loading
-    loadEmptyGroups: function() {
+    loadEmptyGroups: function(cb) {
       api.send("/api/groups/empty", "GET", {}).then(function(response) {
         response = JSON.parse(response);
         let eg = [];
@@ -433,6 +433,7 @@ export default {
         }
         emptyGroups = eg;
         this.createDeleteView();
+        cb();
       }.bind(this))
     },
 
@@ -850,7 +851,7 @@ export default {
       }
     },
     changeAfterReload: function() {
-      this.loadEmptyGroups();
+      this.createDeleteView();
       Swal.close();
       progress.next();
     },
@@ -881,13 +882,13 @@ export default {
               document.getElementById("status_user_delete_" + id).innerHTML = this.getStatusHTML(1);
             }
             if (usersDeleted == usersToDeleteLength) {
-              this.deleteGroups();
+              this.loadEmptyGroups(this.deleteGroups);
             }
           }.bind(this));
           taskRunning = true;
         }
       }
-      if (!taskRunning) this.deleteGroups();
+      if (!taskRunning) this.loadEmptyGroups(this.deleteGroups);
     },
     deleteGroups: function() {
       setTimeout(function() {

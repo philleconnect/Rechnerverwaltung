@@ -478,11 +478,11 @@ export default {
         // Re-Check for cases with 2 agreements
         if (!found) {
           for (const eu of existingUsers) {
-            if (eu.birthdate != null && birthday.convertToDBFormat(user.birthdate) == eu.birthdate && user.firstname == eu.firstname || user.lastname == eu.lastname) {
+            if (eu.birthdate != null && this.calcAgreements(birthday.convertToDBFormat(user.birthdate), eu.birthdate, user.firstname, eu.firstname, user.lastname, eu.lastname) == 2) {
               var sleep = true;
               Swal.fire({
                 title: "Zwei von drei Übereinstimmungen",
-                text: "Ist '" + user.firstname + " " + user.lastname + "' und '" + eu.firstname + " " + eu.lastname + "' (Geburtsdatum " + eu.birthdate + ") die selbe Person?",
+                html: "<p>Ist<br />'" + user.firstname + " " + user.lastname + "' (Geburtsdatum " + birthday.convertToDBFormat(user.birthdate) + ")<br />und<br />'" + eu.firstname + " " + eu.lastname + "' (Geburtsdatum " + eu.birthdate + ")<br />die selbe Person?",
                 showCancelButton: true,
                 allowEscapeKey: false,
                 allowOutsideClick: false,
@@ -492,7 +492,7 @@ export default {
                 if (result.dismiss !== Swal.DismissReason.cancel) {
                   Swal.fire({
                     title: "Welche Stammdaten sollen verwendet werden?",
-                    text: "Es können entwedet die bisherigen Daten oder die neu importierten Daten für diesen Nutzer verwendet werden. Dies betrifft Vor- und Nachname. Alter Name: '" + eu.firstname + " " + eu.lastname + "'; neuer Name: '" + user.firstname + " " + user.lastname + "'",
+                    html: "<p>Es können entwedet die bisherigen Daten oder die neu importierten Daten für diesen Nutzer verwendet werden. Dies betrifft Vor- und Nachname.<br />Alter Name: '" + eu.firstname + " " + eu.lastname + "' (" + eu.birthdate + ")<br />Neuer Name: '" + user.firstname + " " + user.lastname + "' (" + birthday.convertToDBFormat(user.birthdate) + ")</p>",
                     showCancelButton: true,
                     allowEscapeKey: false,
                     allowOutsideClick: false,
@@ -508,6 +508,7 @@ export default {
                         u["changeData"] = true;
                         u["firstname"] = user.firstname;
                         u["lastname"] = user.lastname;
+                        u["birthdate"] = birthday.convertToDBFormat(user.birthdate);
                     }
                     for (const group of user.groups) {
                       let gid = this.getGroupId(group);
@@ -595,6 +596,19 @@ export default {
           }
         }
       }
+    },
+    calcAgreements: function(bd1, bd2, fn1, fn2, ln1, ln2) {
+      let agr = 0;
+      if (bd1 == bd2) {
+        agr++;
+      }
+      if (fn1 == fn2) {
+        agr++;
+      }
+      if (ln1 == ln2) {
+        agr++;
+      }
+      return agr;
     },
 
     // File reading
@@ -772,7 +786,7 @@ export default {
                   email: response.email,
                   title: response.title,
                   short: response.short,
-                  birthdate: response.birthdate,
+                  birthdate: user.birthdate,
                   sex: response.sex,
                   persistant: response.persistant,
                 }

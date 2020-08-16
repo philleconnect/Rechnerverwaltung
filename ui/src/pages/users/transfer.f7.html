@@ -239,7 +239,7 @@ export default {
     finish2: function() {
       Swal.fire({
         title: "Analysiere Nutzer",
-        text: "Dies kann einige Minuten dauern.",
+        text: "Dies kann einige Momente dauern.",
         icon: "info",
         onOpen: function() {
           Swal.showLoading();
@@ -437,7 +437,7 @@ export default {
     },
 
     // The actual transfering logic
-    calculateTransfer: function() {
+    calculateTransfer: async function() {
       // Detect all groups we have to create
       for (const group of data.groups) {
         let exists = false;
@@ -453,6 +453,7 @@ export default {
       // Process users
       for (const user of data.users) {
         let found = false;
+        // Check for cases with 3 agreements
         for (const eu of existingUsers) {
           if (user.firstname == eu.firstname && user.lastname == eu.lastname && birthday.convertToDBFormat(user.birthdate) == eu.birthdate) { // Transfer
             let u = {
@@ -473,6 +474,66 @@ export default {
             found = true;
           }
         }
+        // Re-Check for cases with 2 agreements
+        if (!found) {
+          for (const eu of existingUsers) {
+            if (eu.birthdate != null && birthday.convertToDBFormat(user.birthdate) == eu.birthdate && user.firstname == eu.firstname || user.lastname == eu.lastname) {
+              var sleep = true;
+              Swal.fire({
+                title: "Zwei von drei Übereinstimmungen",
+                text: "Ist '" + user.firstname + " " + user.lastname + "' und '" + eu.firstname + " " + eu.lastname + "' (Geburtsdatum " + eu.birthdate + ") die selbe Person?",
+                showCancelButton: true,
+                allowEscapeKey: false,
+                allowOutsideClick: false,
+                confirmButtonText: "Ja",
+                cancelButtonText: "Nein"
+              }).then(function(result) {
+                if (result.dismiss !== Swal.DismissReason.cancel) {
+                  Swal.fire({
+                    title: "Welche Stammdaten sollen verwendet werden?",
+                    text: "Es können entwedet die bisherigen Daten oder die neu importierten Daten für diesen Nutzer verwendet werden. Dies betrifft Vor- und Nachname. Alter Name: '" + eu.firstname + " " + eu.lastname + "'; neuer Name: '" + user.firstname + " " + user.lastname + "'",
+                    showCancelButton: true,
+                    allowEscapeKey: false,
+                    allowOutsideClick: false,
+                    confirmButtonText: "Neue Daten übernehmen",
+                    cancelButtonText: "Alte Daten beibehalten"
+                  }).then(function(result) {
+                    let u = {
+                      id: eu.id,
+                      groups: [],
+                      willChange: true
+                    }
+                    if (result.dismiss !== Swal.DismissReason.cancel) {
+                        u["changeData"] = true;
+                        u["firstname"] = user.firstname;
+                        u["lastname"] = user.lastname;
+                    }
+                    for (const group of user.groups) {
+                      let gid = this.getGroupId(group);
+                      if (gid < 0 && group != "") {
+                        u.groups.push(group); // Group is new, we only have a name. Add it and replace it later after group creation.
+                      } else {
+                        u.groups.push(gid); // Group is older and we already have an ID.
+                      }
+                    }
+                    usersToChange.push(u);
+                    eu.found = true;
+                    found = true;
+                    sleep = false;
+                    Swal.showLoading();
+                  }.bind(this));
+                } else {
+                  sleep = false;
+                  Swal.showLoading();
+                }
+              }.bind(this));
+              while (sleep) { // This is hacky, but works
+                await new Promise(r => setTimeout(r, 1000));
+              }
+            }
+          }
+        }
+        // All other cases are new users
         if (!found) { // Create new
           let u = {
             firstname: user.firstname,
@@ -665,7 +726,7 @@ export default {
           }
         }
       }
-      if (usersToChange.length == 0) {
+      if (usersToCreate.length == 0) {
         Swal.close();
         progress.next();
       }
@@ -695,6 +756,44 @@ export default {
             if (!user.groups.includes(gid)) {
               userActionsToDo++;
             }
+          }
+          if (user.changeData) {
+            userActionsToDo++;
+            api.send("/api/user/" + user.id, "GET", {}, true).then(function(response) {
+              if (response.status != 200) {
+                userFailed = true;
+              } else {
+                response = JSON.parse(response.responseText);
+                console.log(user);
+                let userdata = {
+                  firstname: user.firstname,
+                  lastname: user.lastname,
+                  email: response.email,
+                  title: response.title,
+                  short: response.short,
+                  birthdate: response.birthdate,
+                  sex: response.sex,
+                  persistant: response.persistant,
+                }
+                api.send("/api/user/" + user.id, "PUT", userdata, true).then(function(response) {
+                  if (response.status != 200) {
+                    userFailed = true;
+                  }
+                  console.log(userFailed);
+                  userActionsDone++;
+                  if (userActionsDone >= userActionsToDo) {
+                    let id = usersToChange.indexOf(user);
+                    if (userFailed) {
+                      document.getElementById("status_change_" + id).innerHTML = this.getStatusHTML(1);
+                    } else {
+                      document.getElementById("status_change_" + id).innerHTML = this.getStatusHTML(2);
+                    }
+                    usersChanged++;
+                    this.finalizeUserChange();
+                  }
+                }.bind(this))
+              }
+            }.bind(this))
           }
           for (const gid of user.groups) {
             if (!actualGroups.includes(gid)) {

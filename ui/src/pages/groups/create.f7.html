@@ -38,7 +38,7 @@
           <div class="select-table">
             <p>Ausgewählte Berechtigungen</p>
             <div class="datagrid">
-              <table>
+              <table id="selected-permissions-table">
                 <thead>
                   <tr>
                     <th>Berechtigung</th>
@@ -53,7 +53,7 @@
           <div class="select-table select-table-right">
             <p>Verfügbare Berechtigungen</p>
             <div class="datagrid">
-              <table>
+              <table id="available-permissions-table">
                 <thead>
                   <tr>
                     <th>Berechtigung</th>
@@ -189,6 +189,8 @@ let hasUsersSearch = null;
 let availableUsersSearch = null;
 let hasGroupsSearch = null;
 let availableGroupsSearch = null;
+let hasPermissionsSearch = null;
+let availablePermissionsSearch = null;
 export default {
   methods: {
     setup: function() {
@@ -325,6 +327,7 @@ export default {
           this.deletePermission(parseInt(e.target.parentElement.dataset.id));
         }.bind(this));
       }
+      this.loadPermissionsSearch();
     },
     createGroupTable: function() {
       let selectedTable = "";
@@ -435,6 +438,20 @@ export default {
         availableUsersSearch.disable();
       }
       availableUsersSearch = new tableSearch("users-available-table", {
+        col_1: "none",
+      });
+    },
+    loadPermissionsSearch: function() {
+      if (hasPermissionsSearch != null) {
+        hasPermissionsSearch.disable();
+      }
+      hasPermissionsSearch = new tableSearch("selected-permissions-table", {
+        col_1: "none",
+      });
+      if (availablePermissionsSearch != null) {
+        availablePermissionsSearch.disable();
+      }
+      availablePermissionsSearch = new tableSearch("available-permissions-table", {
         col_1: "none",
       });
     },

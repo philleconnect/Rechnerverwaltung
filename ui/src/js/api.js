@@ -52,10 +52,12 @@ let api = {
           }
         }
       }.bind(this))
-      request.addEventListener("error", function(event) {
-        this.fireBackendConnectionError();
-        reject(event);
-      }.bind(this))
+      if (!disableErrorMessages) {
+        request.addEventListener("error", function(event) {
+          this.fireBackendConnectionError();
+          reject(event);
+        }.bind(this))
+      }
       let formData = new FormData();
       for (let key in data) {
         formData.append(key, data[key])

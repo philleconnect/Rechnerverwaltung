@@ -330,6 +330,7 @@ export default {
       }
       for (const element of document.getElementsByClassName("delete-group")) {
         element.addEventListener("click", function(e) {
+          console.log(e.target.parentElement.dataset.id);
           this.deleteGroup(parseInt(e.target.parentElement.dataset.id), 1);
         }.bind(this));
       }
@@ -433,7 +434,9 @@ export default {
     },
     deleteGroup: function(id) {
       for (let i = 0; i < selectedGroups.length; i++) {
-        selectedGroups.splice(i, 1);
+        if (selectedGroups[i].id == id) {
+          selectedGroups.splice(i, 1);
+        }
       }
       this.createGroupTable();
     },

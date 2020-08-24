@@ -230,12 +230,12 @@ export default {
 
     // Data saving
     save: function() {
-      let profile = {
+      let saveProfile = {
         name: document.getElementById("name").value,
         comment: document.getElementById("comment").value,
         networklockDefault: profile.networklockDefault
       }
-      api.send("/api/profile/" + this.$route.params.id, "PUT", profile).then(function(response) {
+      api.send("/api/profile/" + this.$route.params.id, "PUT", saveProfile).then(function(response) {
         Swal.fire({
           title: "Änderungen erfolgreich gespeichert.",
           icon: "success",

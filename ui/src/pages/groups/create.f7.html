@@ -282,7 +282,7 @@ export default {
     },
     loadUserList: function() {
       api.send("/api/users", "GET", {}).then(function(response) {
-        availableUsers = JSON.parse(response);
+        availableUsers = JSON.parse(response).sort((a, b) => (a["username"] > b["username"]) ? 1 : -1);
         this.createUserTable();
       }.bind(this));
     },

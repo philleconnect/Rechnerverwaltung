@@ -7,7 +7,7 @@
       <div class="two-col-one">
         <p>Gruppen mit Zugriffsberechtigung</p>
         <div class="datagrid">
-          <table>
+          <table id="groups-selected-table">
             <thead>
               <tr>
                 <th>Gruppe</th>
@@ -22,7 +22,7 @@
       <div class="two-col-two">
         <p>Verfügbare Gruppen</p>
         <div class="datagrid">
-          <table>
+          <table id="groups-available-table">
             <thead>
               <tr>
                 <th>Gruppe</th>
@@ -41,7 +41,10 @@ import api from '../../js/api.js';
 import preloader from '../../js/preloader.js';
 import essentials from '../../js/essentials.js';
 import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
 let share = null;
+let groupSearch = null;
+let groupSearchSelected = null;
 export default {
   methods: {
     // Data loading
@@ -116,7 +119,23 @@ export default {
             this.addGroup(e.target.parentElement.dataset.id);
           }.bind(this));
         }
+        this.loadGroupSearch();
       }.bind(this));
+    },
+    loadGroupSearch: function() {
+      if (groupSearch != null) {
+        groupSearch.disable();
+      }
+      groupSearch = new tableSearch("groups-available-table", {
+        col_1: "none",
+      });
+      if (groupSearchSelected != null) {
+        groupSearchSelected.disable();
+      }
+      groupSearchSelected = new tableSearch("groups-selected-table", {
+        col_1: "none",
+        col_2: "none",
+      });
     },
 
     // Data functions

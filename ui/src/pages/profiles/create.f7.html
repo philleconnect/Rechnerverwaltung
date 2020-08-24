@@ -50,7 +50,7 @@
           <div class="select-table">
             <p>Ausgewählte Gruppen mit Anmelderecht</p>
             <div class="datagrid">
-              <table>
+              <table id="groups-selected-table">
                 <thead>
                   <tr>
                     <th>Gruppe</th>
@@ -64,7 +64,7 @@
           <div class="select-table select-table-right">
             <p>Verfügbare Gruppen</p>
             <div class="datagrid">
-              <table>
+              <table id="groups-available-table">
                 <thead>
                   <tr>
                     <th>Gruppe</th>
@@ -85,7 +85,7 @@
           <div class="select-table">
             <p>An Geräten mit diesem Profil verfügbare Gruppenlaufwerke</p>
             <div class="datagrid">
-              <table>
+              <table id="shares-selected-table">
                 <thead>
                   <tr>
                     <th>Gruppe</th>
@@ -99,7 +99,7 @@
           <div class="select-table select-table-right">
             <p>Verfügbare Gruppenlaufwerke</p>
             <div class="datagrid">
-              <table>
+              <table id="shares-available-table">
                 <thead>
                   <tr>
                     <th>Gruppe</th>
@@ -143,11 +143,16 @@ import preloader from '../../js/preloader.js';
 import essentials from '../../js/essentials.js';
 import Swal from 'sweetalert2';
 import progress from '../../js/progress.js';
+import tableSearch from '../../js/tablesearch.js';
 let existingProfiles = null;
 let selectedGroups = [];
 let selectedShares = [];
 let existingGroups = [];
 let existingShares = [];
+let groupSearch = null;
+let groupSearchSelected = null;
+let shareSearch = null;
+let shareSearchSelected = null;
 export default {
   methods: {
     // Data loading
@@ -266,6 +271,7 @@ export default {
           this.deleteGroup(parseInt(e.target.parentElement.dataset.id));
         }.bind(this));
       }
+      this.loadGroupSearch();
     },
     createShareTable: function() {
       let selectedTable = "";
@@ -306,6 +312,7 @@ export default {
           this.deleteShare(parseInt(e.target.parentElement.dataset.id));
         }.bind(this));
       }
+      this.loadShareSearch();
     },
     createFinishView: function() {
       document.getElementById("fin-name").innerHTML = document.getElementById("profile-name").value;
@@ -317,6 +324,34 @@ export default {
       for (const id of selectedShares) {
         document.getElementById("fin-shares").innerHTML += "<li><i class=\"f7-icons icon-inline\">chevron_right</i>&nbsp;&nbsp;" + this.getDetails(id, "name", existingShares) + "</li>";
       }
+    },
+    loadGroupSearch: function() {
+      if (groupSearch != null) {
+        groupSearch.disable();
+      }
+      groupSearch = new tableSearch("groups-available-table", {
+        col_1: "none",
+      });
+      if (groupSearchSelected != null) {
+        groupSearchSelected.disable();
+      }
+      groupSearchSelected = new tableSearch("groups-selected-table", {
+        col_1: "none",
+      });
+    },
+    loadShareSearch: function() {
+      if (shareSearch != null) {
+        shareSearch.disable();
+      }
+      shareSearch = new tableSearch("shares-available-table", {
+        col_1: "none",
+      });
+      if (shareSearchSelected != null) {
+        shareSearchSelected.disable();
+      }
+      shareSearchSelected = new tableSearch("shares-selected-table", {
+        col_1: "none",
+      });
     },
 
     // Group functions

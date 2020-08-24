@@ -49,7 +49,7 @@
           <div class="select-table">
             <p>Ausgewählte Gruppen mit Zugriffsrecht</p>
             <div class="datagrid">
-              <table>
+              <table id="groups-selected-table">
                 <thead>
                   <tr>
                     <th>Gruppe</th>
@@ -64,7 +64,7 @@
           <div class="select-table select-table-right">
             <p>Verfügbare Gruppen</p>
             <div class="datagrid">
-              <table>
+              <table id="groups-available-table">
                 <thead>
                   <tr>
                     <th>Gruppe</th>
@@ -108,12 +108,15 @@ import preloader from '../../js/preloader.js';
 import essentials from '../../js/essentials.js';
 import Swal from 'sweetalert2';
 import progress from '../../js/progress.js';
+import tableSearch from '../../js/tablesearch.js';
 let existingDrives = null;
 let availableGroups = null;
 let selectedGroups = [];
 let availableSubdirs = null;
 let selectedSubdir = "";
 let subdirName = "";
+let groupSearch = null;
+let groupSearchSelected = null;
 export default {
   methods: {
     // Steps
@@ -330,6 +333,7 @@ export default {
           this.deleteGroup(parseInt(e.target.parentElement.dataset.id), 1);
         }.bind(this));
       }
+      this.loadGroupSearch();
     },
     write: function(id, permission) {
       for (const group of selectedGroups) {
@@ -338,6 +342,21 @@ export default {
         }
       }
       this.createGroupTable();
+    },
+    loadGroupSearch: function() {
+      if (groupSearch != null) {
+        groupSearch.disable();
+      }
+      groupSearch = new tableSearch("groups-available-table", {
+        col_1: "none",
+      });
+      if (groupSearchSelected != null) {
+        groupSearchSelected.disable();
+      }
+      groupSearchSelected = new tableSearch("groups-selected-table", {
+        col_1: "none",
+        col_2: "none",
+      });
     },
 
     // Data functions

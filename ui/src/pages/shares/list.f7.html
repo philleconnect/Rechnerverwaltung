@@ -25,6 +25,7 @@ import essentials from '../../js/essentials.js';
 import Swal from 'sweetalert2';
 import tableSearch from '../../js/tablesearch.js';
 let shares = [];
+let search = null;
 export default {
   methods: {
     // Data loading
@@ -70,6 +71,15 @@ export default {
           this.delete(e.target.parentElement.dataset.id);
         }.bind(this));
       }
+      this.loadSearch();
+    },
+    loadSearch: function() {
+      if (search != null) {
+        search.disable();
+      }
+      search = new tableSearch("groupfolders", {
+        col_3: "none",
+      });
     },
 
     // Data functions

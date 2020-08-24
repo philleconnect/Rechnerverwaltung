@@ -21,7 +21,7 @@
       <div class="two-col-one">
         <p>Gruppen von <span class="profile-name"></span></p>
         <div class="datagrid">
-          <table>
+          <table id="groups-selected-table">
             <thead>
               <tr>
                 <th>Gruppe</th>
@@ -35,7 +35,7 @@
       <div class="two-col-two">
         <p>Verfügbare Gruppen</p>
         <div class="datagrid">
-          <table>
+          <table id="groups-available-table">
             <thead>
               <tr>
                 <th>Gruppe</th>
@@ -51,7 +51,7 @@
       <div class="two-col-one">
         <p>Gruppenlaufwerke von <span class="profile-name"></span></p>
         <div class="datagrid">
-          <table>
+          <table id="shares-selected-table">
             <thead>
               <tr>
                 <th>Gruppe</th>
@@ -65,7 +65,7 @@
       <div class="two-col-two">
         <p>Verfügbare Gruppenlaufwerke</p>
         <div class="datagrid">
-          <table>
+          <table id="shares-available-table">
             <thead>
               <tr>
                 <th>Gruppe</th>
@@ -84,9 +84,14 @@ import api from '../../js/api.js';
 import preloader from '../../js/preloader.js';
 import essentials from '../../js/essentials.js';
 import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
 let groups = [];
 let shares = [];
 let profile = null;
+let groupSearch = null;
+let groupSearchSelected = null;
+let shareSearch = null;
+let shareSearchSelected = null;
 export default {
   methods: {
     // Data loading
@@ -162,6 +167,7 @@ export default {
           this.deleteGroup(parseInt(e.target.parentElement.dataset.id));
         }.bind(this));
       }
+      this.loadGroupSearch();
     },
     createShareTable: function() {
       let selectedTable = "";
@@ -202,6 +208,35 @@ export default {
           this.deleteShare(parseInt(e.target.parentElement.dataset.id));
         }.bind(this));
       }
+      this.loadShareSearch();
+    },
+    loadGroupSearch: function() {
+      if (groupSearch != null) {
+        groupSearch.disable();
+      }
+      groupSearch = new tableSearch("groups-available-table", {
+        col_1: "none",
+      });
+      if (groupSearchSelected != null) {
+        groupSearchSelected.disable();
+      }
+      groupSearchSelected = new tableSearch("groups-selected-table", {
+        col_1: "none",
+      });
+    },
+    loadShareSearch: function() {
+      if (shareSearch != null) {
+        shareSearch.disable();
+      }
+      shareSearch = new tableSearch("shares-available-table", {
+        col_1: "none",
+      });
+      if (shareSearchSelected != null) {
+        shareSearchSelected.disable();
+      }
+      shareSearchSelected = new tableSearch("shares-selected-table", {
+        col_1: "none",
+      });
     },
 
     // Group functions

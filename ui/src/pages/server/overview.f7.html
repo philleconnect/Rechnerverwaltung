@@ -282,14 +282,21 @@ export default {
         }.bind(this)
       })
     },
-    revertPendingChecker: function() {
-      api.send("/api/servermanager", "POST", {url: "/actionstatus", data: JSON.stringify({service: this.$route.params.name})}, true).then(function(response) {
-        if (response.status != 200) {
-          setTimeout(function() {this.pendingChecker();}.bind(this), 2000);
+    revertPendingChecker: function(name) {
+      api.send("/api/servermanager", "POST", {url: "/actionstatus", data: JSON.stringify({service: name})}, true).then(function(response) {
+        if (response.status == 401) { // No auth after core revert
+          Swal.fire({
+            title: "Core erfolgreich zurückgesetzt.",
+            icon: "success",
+          }).then(function() {
+            window.location.reload();
+          })
+        } else if (response.status != 200) {
+          setTimeout(function() {this.revertPendingChecker(name);}.bind(this), 2000);
         } else {
           response = JSON.parse(response.responseText);
           if (response.result == "reverting") {
-            setTimeout(function() {this.pendingChecker();}.bind(this), 2000);
+            setTimeout(function() {this.revertPendingChecker(name);}.bind(this), 2000);
           } else if (response.result == "running") {
             Swal.fire({
               title: "Service '" + this.$route.params.name + "' wurde erfolgreich auf die vorherige Version zurückgesetzt.",

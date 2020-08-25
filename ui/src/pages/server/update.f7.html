@@ -118,7 +118,14 @@ export default {
     },
     pendingChecker: function() {
       api.send("/api/servermanager", "POST", {url: "/actionstatus", data: JSON.stringify({service: this.$route.params.name})}, true).then(function(response) {
-        if (response.status != 200) {
+        if (response.status == 401) { // No auth after core update
+          Swal.fire({
+            title: "Update erfolgreich installiert.",
+            icon: "success",
+          }).then(function() {
+            window.location.reload();
+          })
+        } else if (response.status != 200) {
           setTimeout(function() {this.pendingChecker();}.bind(this), 2000);
         } else {
           response = JSON.parse(response.responseText);

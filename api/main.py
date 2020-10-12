@@ -30,6 +30,9 @@ if not os.path.exists(config.CONFIG_AUTOSETUP_FILE):
         print("Error accessing LDAP server. Exiting.")
         sys.exit()
     open(config.CONFIG_AUTOSETUP_FILE, "a").close()
+if not os.path.exists(config.CONFIG_SECRET_KEY):
+    with open(config.CONFIG_SECRET_KEY, "w") as f:
+        f.write(es.randomString(40))
 
 # Include endpoints
 from endpoints.login import loginApi
@@ -60,7 +63,8 @@ SESSION_COOKIE_NAME = "SC_SESSION"
 SESSION_COOKIE_SECURE = False # Set this to true for production (SSL required)
 PERMANENT_SESSION_LIFETIME = 1200
 api.config.from_object(__name__)
-api.secret_key = es.randomString(40)
+with open(config.CONFIG_SECRET_KEY, "r") as f:
+    api.secret_key = f.read()
 login_manager = LoginManager()
 login_manager.init_app(api)
 login_manager.needs_refresh_message = (u"Session timed out, please re-login")

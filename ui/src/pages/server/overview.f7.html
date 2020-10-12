@@ -299,14 +299,14 @@ export default {
             setTimeout(function() {this.revertPendingChecker(name);}.bind(this), 2000);
           } else if (response.result == "running") {
             Swal.fire({
-              title: "Service '" + this.$route.params.name + "' wurde erfolgreich auf die vorherige Version zurückgesetzt.",
+              title: "Service '" + name + "' wurde erfolgreich auf die vorherige Version zurückgesetzt.",
               icon: "success"
             }).then(function() {
               window.app.views.main.router.navigate("/server");
             })
           } else if (response.result == "paused") {
             Swal.fire({
-              title: "Service '" + this.$route.params.name + "' wurde erfolgreich auf die vorherige Version zurückgesetzt.",
+              title: "Service '" + name + "' wurde erfolgreich auf die vorherige Version zurückgesetzt.",
               icon: "success"
             }).then(() => {
               window.app.views.main.router.navigate("/server");
@@ -314,7 +314,7 @@ export default {
           } else {
             Swal.fire({
               title: "Es ist ein Fehler aufgetreten.",
-              text: "'" + this.$route.params.name  + "' konnte nicht auf die vorherige Version zurückgesetzt werden.",
+              text: "'" + name  + "' konnte nicht auf die vorherige Version zurückgesetzt werden.",
               icon: "error"
             })
           }

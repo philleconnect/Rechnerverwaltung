@@ -7,6 +7,7 @@
 # Include dependencies
 import os
 import json
+import requests
 from flask import Blueprint, request, jsonify
 from flask_login import login_required
 
@@ -15,11 +16,9 @@ import helpers.essentials as es
 import modules.database as db
 import modules.ldap as ldap
 import modules.directory as directory
-from modules.integritycheckManager import integritycheckManager
 from modules.integritycheckCheckers import integritycheckCheckers
 
 # Create integrity check manager
-icMan = integritycheckManager()
 checkers = integritycheckCheckers()
 
 # Endpoint definition
@@ -29,9 +28,17 @@ integritycheckApi = Blueprint("integritycheckApi", __name__)
 def getIntegrityStatus():
     if not es.isAuthorized("usermgmt"):
         return "ERR_ACCESS_DENIED", 403
+    try:
+        status = requests.get(url = "http://localhost:25252/status")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
+    try:
+        lastRun = requests.get(url = "http://localhost:25252/lastRun")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
     response = {
-        "status": icMan.getStatus(),
-        "lastRun": icMan.getLastRun(),
+        "status": json.loads(status.text)["response"],
+        "lastRun": json.loads(lastRun.text)["response"],
     }
     return jsonify(response), 200
 
@@ -40,7 +47,11 @@ def getIntegrityStatus():
 def getIntegrityResults():
     if not es.isAuthorized("usermgmt"):
         return "ERR_ACCESS_DENIED", 403
-    results = icMan.getResults()
+    try:
+        response = requests.get(url = "http://localhost:25252/results")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
+    results = json.loads(response.text)["response"]
     if results == None:
         return "NO_RESULT_AVAILABLE", 200
     return jsonify(results), 200
@@ -50,7 +61,10 @@ def getIntegrityResults():
 def runIntegrityCheck():
     if not es.isAuthorized("usermgmt"):
         return "ERR_ACCESS_DENIED", 403
-    icMan.run()
+    try:
+        run = requests.put(url = "http://localhost:25252/run")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
     return "SUCCESS", 200
 
 @integritycheckApi.route("/api/integritycheck/fix/group/<id>", methods=["POST"])
@@ -79,8 +93,14 @@ def fixGroup(id):
             return "ERR_LDAP_ERROR", 500
     else:
         return "ERR_ALL_DONE", 200
-    icMan.removeError(int(id), "ERR_LDAP_ENTRY_MISSING")
-    icMan.removeError(int(id), "ERR_LDAP_ENTRY_INCOMPLETE")
+    try:
+        removeError = requests.delete(url = "http://localhost:25252/removeError/" + id + "/ERR_LDAP_ENTRY_MISSING/0")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
+    try:
+        removeError = requests.delete(url = "http://localhost:25252/removeError/" + id + "/ERR_LDAP_ENTRY_INCOMPLETE/0")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
     return "SUCCESS", 200
 
 @integritycheckApi.route("/api/integritycheck/fix/user/<id>", methods=["POST"])
@@ -101,8 +121,14 @@ def fixUser(id):
             return "ERR_DATABASE_ERROR", 500
     else:
         return "ERR_ALL_DONE", 200
-    icMan.removeError(id, "ERR_LDAP_ENTRY_MISSING", True)
-    icMan.removeError(id, "ERR_LDAP_ENTRY_INCOMPLETE", True)
+    try:
+        removeError = requests.delete(url = "http://localhost:25252/removeError/" + id + "/ERR_LDAP_ENTRY_MISSING/1")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
+    try:
+        removeError = requests.delete(url = "http://localhost:25252/removeError/" + id + "/ERR_LDAP_ENTRY_INCOMPLETE/1")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
     return "SUCCESS", 200
 
 @integritycheckApi.route("/api/integritycheck/fix/folder/<id>", methods=["POST"])
@@ -123,8 +149,14 @@ def fixFolder(id):
     if check >= 1:
         if not dir.setOwner(user["username"], "users", user["unix_userid"]):
             return "ERR_FOLDER_ERROR", 500
-    icMan.removeError(id, "ERR_HOMEFOLDER_MISSING", True)
-    icMan.removeError(id, "ERR_HOMEFOLDER_PERMISSIONS", True)
+    try:
+        removeError = requests.delete(url = "http://localhost:25252/removeError/" + id + "/ERR_HOMEFOLDER_MISSING/1")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
+    try:
+        removeError = requests.delete(url = "http://localhost:25252/removeError/" + id + "/ERR_HOMEFOLDER_PERMISSIONS/1")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
     return "SUCCESS", 200
 
 @integritycheckApi.route("/api/integritycheck/fix/membership/<id>", methods=["POST"])
@@ -145,5 +177,8 @@ def fixGroupMembership(id):
                 return "ERR_LDAP_ERROR", 500
             if memberResult == -2:
                 return "ERR_DATABASE_ERROR", 500
-    icMan.removeError(id, "ERR_LDAP_GROUP_MEMBERSHIP", True)
+    try:
+        removeError = requests.delete(url = "http://localhost:25252/removeError/" + id + "/ERR_LDAP_GROUP_MEMBERSHIP/1")
+    except:
+        return "ERR_CONNECTION_ERROR", 500
     return "SUCCESS", 200

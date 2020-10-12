@@ -39,13 +39,14 @@ class integritycheckManager:
 
     # Run a new check
     def run(self):
-        self.__status = 1
-        self.__results = {
-            "groups": {},
-            "users": {}
-        }
-        self.__workerThread = threading.Thread(target = self.__asyncRun)
-        self.__workerThread.start()
+        if not self.__status == 1:
+            self.__status = 1
+            self.__results = {
+                "groups": {},
+                "users": {}
+            }
+            self.__workerThread = threading.Thread(target = self.__asyncRun)
+            self.__workerThread.start()
 
     # Run worker
     def __asyncRun(self):

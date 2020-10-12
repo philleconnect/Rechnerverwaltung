@@ -123,7 +123,6 @@ export default {
         if (Object.keys(groupErrors).length <= 0 && Object.keys(accountErrors).length <= 0) {
           this.showElement(true);
         }
-        console.log(accountErrors);
       }.bind(this))
     },
     loadUsers: function() {
@@ -217,7 +216,7 @@ export default {
         tableContent += "<td>" + this.getUsername(key) + "</td><td>" + errorDescription + "</td><td>" + actions + "</td></tr>";
       }
       document.getElementById("accounts-content").innerHTML = tableContent;
-      let classNames = ["account", "membership", "foldermissing", "folder"];
+      let classNames = ["accountmissing", "account", "membership", "foldermissing", "folder"];
       for (const key of classNames) {
         for (const element of document.getElementsByClassName(key)) {
           element.addEventListener("click", function(e) {

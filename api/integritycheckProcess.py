@@ -40,10 +40,10 @@ def lastRun():
 
 @integrityApi.route("/removeError/<id>/<error>/<user>", methods=["DELETE"])
 def removeError(id, error, user):
-    userValue = False if user == 0 else True
-    if not userValue:
-        id = int(id)
-    icMan.removeError(id, error, userValue)
+    if user == "0":
+        icMan.removeError(int(id), error, False)
+    else:
+        icMan.removeError(id, error, True)
     return "DONE", 200
 
 # Create server

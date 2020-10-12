@@ -103,9 +103,10 @@ class integritycheckManager:
 
     # Remove a fixed error from the list
     def removeError(self, id, error, user = False):
-        key = "groups"
-        if user:
+        if user == True:
             key = "users"
+        else:
+            key = "groups"
         try:
             self.__results[key][id].pop(error, None)
             if len(self.__results[key][id].items()) <= 0:

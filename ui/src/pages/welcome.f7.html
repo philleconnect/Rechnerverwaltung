@@ -1,10 +1,151 @@
 <template>
   <div class="page">
     <a href="#nav" class="nav-toggle">Menu</a>
-    <p style="font-family: Arial, sans-serif; font-size: 45px;"><b>WILLKOMMEN</b></p>
-    <p>Hier könnte ihre Werbung stehen. Oder auch sinnvolle Infos zum Server...</p>
+    <p style="font-family: Arial, sans-serif; font-size: 45px;"><b>PHILLECONNECT</b>ADMIN</p>
+    <h1>Guten <span id="time"></span>, <span id="name"></span>!</h1>
+    <div id="users-groups" class="nodisplay">
+      <br />
+      <h2>Benutzer und Gruppen</h2>
+      <p>Es sind <span id="users"></span> Benutzer und <span id="groups"></span> Gruppen registriert.</p>
+      <br />
+      <div id="integrity-all-ok" class="standalone-container nodisplay">
+        <i class="f7-icons standalone-icon" style="color: green;">checkmark_circle_fill</i><h4 class="standalone-icon-headline">Es ist alles in Ordnung! Letzte Prüfung: <span class="last-check">Keine Prüfung durchgeführt.</span></h4>
+      </div>
+      <div id="integrity-is-running" class="standalone-container nodisplay">
+        <i class="f7-icons standalone-icon" style="color: #1155BC;">info_circle_fill</i><h4 class="standalone-icon-headline">Es wird gerade ein Integritätscheck durchgeführt...</h4>
+      </div>
+      <div id="integrity-not-ok" class="standalone-container nodisplay">
+        <i class="f7-icons standalone-icon" style="color: red;">xmark_circle_fill</i><h4 class="standalone-icon-headline">Es wurden Fehler festgestellt. Weitere Infos im Menüpunkt "Integritätscheck". Letzte Prüfung: <span class="last-check">Keine Prüfung durchgeführt.</span></h4>
+      </div>
+    </div>
+    <br />
+    <div id="server" class="nodisplay">
+      <h2>Server</h2>
+      <p><span id="plugins"></span></p>
+      <br />
+      <div id="server-all-ok" class="standalone-container nodisplay">
+        <i class="f7-icons standalone-icon" style="color: green;">checkmark_circle_fill</i><h4 class="standalone-icon-headline">Das System ist auf dem neuesten Stand!</h4>
+      </div>
+      <div id="server-update-available" class="standalone-container nodisplay">
+        <i class="f7-icons standalone-icon" style="color: #1155BC;">info_circle_fill</i><h4 class="standalone-icon-headline">Es sind Updates verfügbar. Weitere Infos im Menüpunkt "Server".</h4>
+      </div>
+    </div>
   </div>
 </template>
 <script>
-export default {}
+import api from '../js/api.js';
+let updates = false;
+export default {
+  methods: {
+    loadName: function() {
+      let now = new Date();
+      let hour = now.getHours();
+      let greeting;
+      if (hour < 11) {
+        greeting = "Morgen";
+      } else if (hour > 17) {
+        greeting = "Abend";
+      } else {
+        greeting = "Tag";
+      }
+      document.getElementById("time").innerHTML = greeting;
+      api.send("/api/current", "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        document.getElementById("name").innerHTML = response.name;
+      }.bind(this))
+    },
+    loadUsersGroups: function() {
+      document.getElementById("users-groups").classList.remove("nodisplay");
+      api.send("/api/usercount", "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        document.getElementById("users").innerHTML = response.count;
+      }.bind(this))
+      api.send("/api/groupcount", "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        document.getElementById("groups").innerHTML = response.count;
+      }.bind(this))
+      this.checkIntegrityStatus();
+    },
+    checkIntegrityStatus: function() {
+      api.send("/api/integritycheck/status", "GET", {}).then(function(response) {
+        response = JSON.parse(response);
+        if (response.status == 0) {
+          document.getElementById("integrity-not-ok").classList.remove("nodisplay");
+          document.getElementById("integrity-all-ok").classList.add("nodisplay");
+          document.getElementById("integrity-is-running").classList.add("nodisplay");
+        } else if (response.status == 1) {
+          document.getElementById("integrity-not-ok").classList.add("nodisplay");
+          document.getElementById("integrity-all-ok").classList.add("nodisplay");
+          document.getElementById("integrity-is-running").classList.remove("nodisplay");
+          setTimeout(function() {
+            this.checkIntegrityStatus();
+          }.bind(this), 2000);
+        } else if (response.status == 2) {
+          let lastRun = new Date(parseInt(response.lastRun) * 1000);
+          let minutes = "0" + lastRun.getMinutes();
+          for (const el of document.getElementsByClassName("last-check")) {
+            el.innerHTML = lastRun.getDate() + "." + (lastRun.getMonth() + 1) + "." + lastRun.getFullYear() + " " + lastRun.getHours() + ":" + minutes.substr(-2);
+          }
+          api.send("/api/integritycheck/results", "GET", {}).then(function(response) {
+            response = JSON.parse(response);
+            let groupErrors = response.groups;
+            let accountErrors = response.users;
+            if (Object.keys(groupErrors).length <= 0 && Object.keys(accountErrors).length <= 0) {
+              document.getElementById("integrity-not-ok").classList.add("nodisplay");
+              document.getElementById("integrity-all-ok").classList.remove("nodisplay");
+              document.getElementById("integrity-is-running").classList.add("nodisplay");
+            } else {
+              document.getElementById("integrity-not-ok").classList.remove("nodisplay");
+              document.getElementById("integrity-all-ok").classList.add("nodisplay");
+              document.getElementById("integrity-is-running").classList.add("nodisplay");
+            }
+          }.bind(this))
+        }
+      }.bind(this))
+    },
+    loadServer: function() {
+      document.getElementById("server").classList.remove("nodisplay");
+      api.send("/api/servermanager", "POST", {url: "/status"}).then(function(response) {
+        response = JSON.parse(response);
+        document.getElementById("plugins").innerHTML = ((response.length - 1) == 1) ? "Es ist 1 Plugin installiert." : "Es sind " + (response.length - 1) + " Plugins installiert.";
+        for (const service of response) {
+          api.send("/api/servermanager", "POST", {url: "/updatecheck", data: JSON.stringify({service: service.name})}).then(function(response) {
+            response = JSON.parse(response);
+            if (response.actualVersion != response.latestPossible) {
+              updates = true;
+              this.setUpdate();
+            }
+          }.bind(this));
+        }
+      }.bind(this));
+      api.send("/api/servermanager", "POST", {url: "/manager"}).then(function(response) {
+        response = JSON.parse(response);
+        if (response.available) {
+          updates = true;
+          this.setUpdate();
+        }
+      }.bind(this));
+      this.setUpdate();
+    },
+    setUpdate: function() {
+      console.log("CALL");
+      if (!updates) {
+        document.getElementById("server-all-ok").classList.remove("nodisplay");
+      } else {
+        document.getElementById("server-update-available").classList.remove("nodisplay");
+      }
+    }
+  },
+  on: {
+    pageInit: function() {
+      this.loadName();
+      if (window.currentUserPermissions.includes("usermgmt")) {
+        this.loadUsersGroups();
+      }
+      if (window.currentUserPermissions.includes("servmgmt")) {
+        this.loadServer();
+      }
+    }
+  }
+}
 </script>

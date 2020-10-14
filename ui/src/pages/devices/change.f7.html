@@ -26,7 +26,7 @@
       </div>
       <div class="two-col-two">
         <h3>Geräteinformationen:</h3>
-        <p>Registrierungszeitpunkt: <span id="registered"></span></p>
+        <p>Registrierung: <span id="registered"></span></p>
         <p>MAC-Adresse: <span id="address"></span></p>
         <p>IPv4-Adresse: <span id="ipv4"></span></p>
         <p>IPv6-Adresse: <span id="ipv6"></span></p>
@@ -35,9 +35,11 @@
     </div>
     <button @click="load()">Zurücksetzen</button>
     <button @click="save()">Änderungen speichern</button>
-    <p>Aktivitätsprotokoll für dieses Gerät:</p>
+    <br />
+    <br />
+    <h3>Aktivitätsprotokoll für dieses Gerät:</h3>
     <div class="datagrid">
-      <table>
+      <table id="log-table">
         <thead>
           <tr>
             <th>Benutzer</th>
@@ -56,9 +58,11 @@ import api from '../../js/api.js';
 import preloader from '../../js/preloader.js';
 import essentials from '../../js/essentials.js';
 import Swal from 'sweetalert2';
+import tableSearch from '../../js/tablesearch.js';
 let device = null;
 let profiles = [];
 let users = [];
+let logSearch = null;
 export default {
   methods: {
     // Data loading
@@ -85,7 +89,7 @@ export default {
         document.getElementById("ipv4").innerHTML = (device["ipv4"] == null) ? "Nicht vorhanden." : device["ipv4"];
         document.getElementById("ipv6").innerHTML = (device["ipv6"] == null) ? "Nicht vorhanden." : device["ipv6"];
         document.getElementById("address").innerHTML = (device["address"] == null) ? "Nicht vorhanden." : device["address"];
-        document.getElementById("registered").innerHTML = (device["registered"] == null) ? "Nicht vorhanden." : device["registered"];
+        document.getElementById("registered").innerHTML = (device["registered"] == null) ? "Nicht vorhanden." : essentials.niceifyTimestamp(device["registered"]);
         document.getElementById("owner").innerHTML = (device["people_id"] == null) ? "Kein persönliches Gerät." : this.getNameById(device["people_id"]);
         this.writeProfiles();
         this.writeLog();
@@ -114,6 +118,18 @@ export default {
         tableContent += "<td>" + this.getNameById(log["people_id"]) + "</td><td>" + essentials.niceifyTimestamp(log["timestamp"]) + "</td><td>" + essentials.getLogText(log["type"], log["info"]) + "</td><td>" + affected + "</td></tr>";
       }
       document.getElementById("activitylog").innerHTML = (tableContent == "") ? "Keine Ereignisse vorhanden." : tableContent;
+      this.loadLogSearch();
+    },
+
+    // Data search
+    loadLogSearch: function() {
+      if (logSearch != null) {
+        logSearch.disable();
+      }
+      logSearch = new tableSearch("log-table", {
+        col_2: "select",
+        clear_filter_text: "Alle anzeigen"
+      });
     },
 
     // Helpers

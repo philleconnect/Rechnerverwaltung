@@ -366,7 +366,7 @@ export default {
                   icon: "error"
                 })
               }
-            });
+            }.bind(this));
           }.bind(this))
         }.bind(this)
       })
@@ -391,7 +391,7 @@ export default {
               icon: "error"
             })
           } else if (response.result) {
-            setTimeout(function() {managerPendingChecker(version);}.bind(this), 2000);
+            setTimeout(function() {this.managerPendingChecker(version);}.bind(this), 2000);
           } else {
             Swal.fire({
               title: "Es ist ein Fehler aufgetreten.",

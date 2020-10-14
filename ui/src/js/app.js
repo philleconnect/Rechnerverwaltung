@@ -22,6 +22,7 @@ import routes from './routes.js';
 import api from './api.js';
 import login from './login.js';
 import menue from './menue.js';
+import timeout from './timeout.js';
 
 // Import main app component
 import App from '../app.f7.html';
@@ -39,6 +40,7 @@ window.app = new Framework7({
   // Events
   on: {
     pageInit: function(page) {
+      timeout.resetClock();
       menue.markActive(page.name);
     }
   }

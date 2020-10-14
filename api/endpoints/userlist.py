@@ -30,3 +30,12 @@ def listUsers():
         user["groups"] = ids
         users.append(user)
     return jsonify(users), 200
+
+@userListApi.route("/api/usercount", methods=["GET"])
+@login_required
+def userCount():
+    if not es.isAuthorized("usermgmt"):
+        return "ERR_ACCESS_DENIED", 403
+    dbconn = db.database()
+    dbconn.execute("SELECT COUNT(*) AS c FROM people")
+    return jsonify({"count": dbconn.fetchone()["c"]}), 200

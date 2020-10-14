@@ -42,3 +42,12 @@ def listEmptyGroups():
     for group in dbconn.fetchall():
         groups.append(group["id"])
     return jsonify(groups), 200
+
+@groupListApi.route("/api/groupcount", methods=["GET"])
+@login_required
+def userCount():
+    if not es.isAuthorized("usermgmt"):
+        return "ERR_ACCESS_DENIED", 403
+    dbconn = db.database()
+    dbconn.execute("SELECT COUNT(*) AS c FROM groups")
+    return jsonify({"count": dbconn.fetchone()["c"]}), 200

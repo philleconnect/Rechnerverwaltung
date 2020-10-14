@@ -64,49 +64,53 @@ let essentials = {
     },
     niceifyTimestamp: function(input) {
         let date = new Date(input);
-        return date.getDate() + "." + (date.getMonth() + 1) + "." + date.getFullYear() + " " + date.getHour() + ":" + date.getMinute() + ":" + date.getSeconds();
+        return date.getDate() + "." + (date.getMonth() + 1) + "." + date.getFullYear() + " " + date.getHours() + ":" + this.addLeadingZeroIfNeeded(date.getMinutes()) + ":" + this.addLeadingZeroIfNeeded(date.getSeconds());
+    },
+    addLeadingZeroIfNeeded: function(input) {
+        let value = "0" + input;
+        return value.substr(-2);
     },
     getLogText: function(type, info) {
         switch(type) {
             case 0:
                 switch(info) {
-                    case 0:
+                    case "0":
                         return "Erfolgreich angemeldet.";
-                    case 10:
+                    case "10":
                         return "Zugangsdaten fehlerhaft.";
-                    case 11:
+                    case "11":
                         return "Berechtigungen fehlerhaft.";
                 }
             case 1:
                 switch(info) {
-                    case 0:
+                    case "0":
                         return "Passwort erfolgreich geändert.";
-                    case 1:
+                    case "1":
                         return "Passwort ändern fehlgeschlagen: Datenbankfehler.";
-                    case 2:
+                    case "2":
                         return "Passwort ändern fehlgeschlagen: LDAP-Fehler.";
-                    case 10:
+                    case "10":
                         return "Passwort ändern fehlgeschlagen: Altes Passwort falsch.";
-                    case 11:
+                    case "11":
                         return "Passwort ändern fehlgeschlagen: Neue Passwörter stimmen nicht überein.";
                 }
             case 2:
                 switch(info) {
-                    case 0:
+                    case "0":
                         return "Passwort erfolgreich zurückgesetzt.";
-                    case 1:
+                    case "1":
                         return "Passwort zurücksetzen fehlgeschlagen: Datenbankfehler.";
-                    case 2:
+                    case "2":
                         return "Passwort zurücksetzen fehlgeschlagen: LDAP-Fehler.";
-                    case 10:
+                    case "10":
                         return "Passwort zurücksetzen fehlgeschlagen: Authentifizierung abgelehnt.";
-                    case 11:
+                    case "11":
                         return "Passwort zurücksetzen fehlgeschlagen: Neue Passwörter stimmen nicht überein.";
-                    case 12:
+                    case "12":
                         return "Passwort zurücksetzen fehlgeschlagen: Berechtigung fehlt.";
-                    case 13:
+                    case "13":
                         return "Passwort zurücksetzen fehlgeschlagen: Passwort des Ziels kann nicht zurückgesetzt werden.";
-                    case 14:
+                    case "14":
                         return "Passwort zurücksetzen fehlgeschlagen: Kein Lehrer-PC.";
                 }
         }

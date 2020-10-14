@@ -131,7 +131,9 @@ export default {
       console.log("CALL");
       if (!updates) {
         document.getElementById("server-all-ok").classList.remove("nodisplay");
+        document.getElementById("server-update-available").classList.add("nodisplay");
       } else {
+        document.getElementById("server-all-ok").classList.add("nodisplay");
         document.getElementById("server-update-available").classList.remove("nodisplay");
       }
     }

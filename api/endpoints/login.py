@@ -35,3 +35,10 @@ def createSession():
 def removeSession():
     logout_user()
     return "SUCCESS", 200
+
+@loginApi.route("/api/current", methods=["GET"])
+@login_required
+def getCurrentUserName():
+    dbconn = db.database()
+    dbconn.execute("SELECT firstname FROM people WHERE username = %s", (current_user.username,))
+    return jsonify({"name": dbconn.fetchone()["firstname"]}), 200

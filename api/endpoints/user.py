@@ -41,7 +41,7 @@ def specificUser(id):
         dbconn.execute("SELECT name, id FROM device WHERE people_id = %s", (id,))
         for device in dbconn.fetchall():
             user["devices"].append(device)
-        dbconn.execute("SELECT timestamp, info, D.name, D.id FROM localLoginLog LLL INNER JOIN device D ON D.id = LLL.device_id WHERE LLL.people_id = %s", (id,))
+        dbconn.execute("SELECT timestamp, info, type, D.name AS devicename, D.id AS deviceid, P.preferredname AS people FROM localLoginLog LLL LEFT JOIN device D ON D.id = LLL.device_id LEFT JOIN people P ON LLL.affected = P.id WHERE LLL.people_id = %s OR LLL.affected = %s", (id, id))
         for loginEvent in dbconn.fetchall():
             user["logins"].append(loginEvent)
         dbconn.execute("SELECT autogen, cleartext FROM userpassword WHERE people_id = %s", (id,))

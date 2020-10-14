@@ -70,7 +70,7 @@ let essentials = {
         let value = "0" + input;
         return value.substr(-2);
     },
-    getLogText: function(type, info) {
+    getLogText: function(type, info, target = null) {
         switch(type) {
             case 0:
                 switch(info) {
@@ -95,23 +95,27 @@ let essentials = {
                         return "Passwort ändern fehlgeschlagen: Neue Passwörter stimmen nicht überein.";
                 }
             case 2:
+                let targetString = "";
+                if (target != null) {
+                  targetString = " (" + target + ")";
+                }
                 switch(info) {
                     case "0":
-                        return "Passwort erfolgreich zurückgesetzt.";
+                        return "Passwort erfolgreich zurückgesetzt." + targetString;
                     case "1":
-                        return "Passwort zurücksetzen fehlgeschlagen: Datenbankfehler.";
+                        return "Passwort zurücksetzen fehlgeschlagen: Datenbankfehler." + targetString;
                     case "2":
-                        return "Passwort zurücksetzen fehlgeschlagen: LDAP-Fehler.";
+                        return "Passwort zurücksetzen fehlgeschlagen: LDAP-Fehler." + targetString;
                     case "10":
-                        return "Passwort zurücksetzen fehlgeschlagen: Authentifizierung abgelehnt.";
+                        return "Passwort zurücksetzen fehlgeschlagen: Authentifizierung abgelehnt." + targetString;
                     case "11":
-                        return "Passwort zurücksetzen fehlgeschlagen: Neue Passwörter stimmen nicht überein.";
+                        return "Passwort zurücksetzen fehlgeschlagen: Neue Passwörter stimmen nicht überein." + targetString;
                     case "12":
-                        return "Passwort zurücksetzen fehlgeschlagen: Berechtigung fehlt.";
+                        return "Passwort zurücksetzen fehlgeschlagen: Berechtigung fehlt." + targetString;
                     case "13":
-                        return "Passwort zurücksetzen fehlgeschlagen: Passwort des Ziels kann nicht zurückgesetzt werden.";
+                        return "Passwort zurücksetzen fehlgeschlagen: Passwort des Ziels kann nicht zurückgesetzt werden." + targetString;
                     case "14":
-                        return "Passwort zurücksetzen fehlgeschlagen: Kein Lehrer-PC.";
+                        return "Passwort zurücksetzen fehlgeschlagen: Kein Lehrer-PC." + targetString;
                 }
         }
         return "";

@@ -112,14 +112,14 @@
         <p>Gerätezuweisungen sowie gerätespezifische Einstellungen können im Bereich 'Geräte' mit entsprechenden Rechten geändert werden.</p>
       </div>
       <div class="two-col-two">
-        <p>Login-Vorgänge / Versuche</p>
+        <p>Aktivitätsprotokoll</p>
         <div class="datagrid">
           <table id="logins-table">
             <thead>
               <tr>
                 <th>Gerät</th>
                 <th>Zeit</th>
-                <th>Status</th>
+                <th>Vorgang</th>
               </tr>
             </thead>
             <tbody id="logins"></tbody>
@@ -198,7 +198,7 @@ export default {
         }
         document.getElementById("devices").innerHTML = (devicesTable != "") ? devicesTable : "Keine Geräte vorhanden.";
         style = false;
-        for (const login of response.logins) {
+        for (const log of response.logins) {
           if (style) {
             loginsTable += "<tr class=\"alt\">";
             style = false;
@@ -206,9 +206,9 @@ export default {
             loginsTable += "<tr>";
             style = true;
           }
-          loginsTable += "<td>" + login["devicename"] + "</td><td></td><td></td></tr>";
+          loginsTable += "<td>" + log["devicename"] + "</td><td>" + essentials.niceifyTimestamp(log["timestamp"]) + "</td><td>" + essentials.getLogText(log["type"], log["info"], log["people"]) + "</td></tr>";
         }
-        document.getElementById("logins").innerHTML = (loginsTable != "") ? loginsTable : "Keine Loginversuche vorhanden.";
+        document.getElementById("logins").innerHTML = (loginsTable != "") ? loginsTable : "Keine Einträge vorhanden.";
         for (const element of document.getElementsByClassName("delete-group")) {
           element.addEventListener("click", function(e) {
             this.deleteGroup(parseInt(e.target.parentElement.dataset.id));
@@ -308,7 +308,9 @@ export default {
         loginsSearch.disable();
       }
       loginsSearch = new tableSearch("logins-table", {
-        col_1: "none",
+        col_0: "select",
+        col_2: "select",
+        clear_filter_text: "Alle anzeigen"
       });
     },
 

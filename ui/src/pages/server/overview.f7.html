@@ -2,6 +2,12 @@
   <div class="page" data-name="Server">
     <p style="font-family: Arial, sans-serif; font-size: 45px; text-transform: uppercase;"><b>SERVER</b>MANAGEMENT</p>
     <p id="servermanager_version">ServerManager-Version: Laden...</p>
+    <br />
+    <p>Aktuell verwendeter Update-Branch: <span id="branch"></span></p>
+    <button @click="setUpdateBranch('beta')" id="beta-button" class="nodisplay">In Beta-Branch wechseln</button>
+    <button @click="setUpdateBranch('production')" id="production-button" class="nodisplay">In Production-Branch wechseln</button>
+    <br />
+    <br />
     <p>Grundfunktionen:</p>
     <div class="datagrid">
       <table id="services">
@@ -52,6 +58,15 @@ export default {
         services = JSON.parse(response);
         this.writeTable();
       }.bind(this));
+      api.send("/api/servermanager", "POST", {url: "/branch"}).then(function(response) {
+        response = JSON.parse(response)["result"];
+        document.getElementById("branch").innerHTML = response.name + " (" + response.url + ")";
+        if (response.name == "production") {
+          document.getElementById("beta-button").classList.remove("nodisplay");
+        } else {
+          document.getElementById("production-button").classList.remove("nodisplay");
+        }
+      }.bind(this))
     },
 
     // Data writing
@@ -382,8 +397,8 @@ export default {
               title: "ServerManager wurde erfolgreich aktualisiert.",
               icon: "success"
             }).then(function() {
-              this.checkManager();
-            })
+              this.get();
+            }.bind(this))
           } else if (response.error) {
             Swal.fire({
               title: "Es ist ein Fehler aufgetreten.",
@@ -401,6 +416,35 @@ export default {
           }
         }
       }.bind(this));
+    },
+
+    // Update branches
+    setUpdateBranch: function(branch) {
+      let title = (branch == "beta") ? "Wirklich in den Beta-Branch wechseln?" : "Wirklich in den Production-Branch wechseln?";
+      let text = (branch == "beta") ? "WARNUNG: Der Beta-Branch ist nur für Testzwecke geeignet und enthält instabile und unvollständige Software. Mit der Auswahl des Beta-Branches werden Beta-Updates zur Installation angeboten, es wird aber noch nichts am System verändert." : "Es werden keine Beta-Updates mehr angeboten. Bereits installierte Updates bleiben erhalten.";
+      Swal.fire({
+        title: title,
+        text: text,
+        icon: "question",
+        showCancelButton: true,
+        cancelButtonText: 'Abbrechen',
+        confirmButtonText: 'Wechseln',
+        showLoaderOnConfirm: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        preConfirm: function() {
+          return new Promise(function(resolve) {
+            api.send("/api/servermanager", "POST", {url: "/setbranch", data: JSON.stringify({branch: branch})}).then(function(response) {
+              Swal.fire({
+                title: "Branch erfolgreich gewechselt.",
+                text: "Neuer Branch: " + branch,
+                icon: "success"
+              })
+              this.get();
+            }.bind(this))
+          }.bind(this))
+        }.bind(this)
+      })
     }
   },
   on: {

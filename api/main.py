@@ -19,6 +19,7 @@ import modules.configfile as cf
 import helpers.essentials as es
 import modules.autosetup as autos
 import modules.apiUser as apiUser
+import helpers.update as upd
 
 # Run first setup
 if not os.path.exists(config.CONFIG_AUTOSETUP_FILE):
@@ -33,6 +34,16 @@ if not os.path.exists(config.CONFIG_AUTOSETUP_FILE):
 if not os.path.exists(config.CONFIG_SECRET_KEY):
     with open(config.CONFIG_SECRET_KEY, "w") as f:
         f.write(es.randomString(40))
+
+# Run updates
+if not os.path.exists(config.CONFIG_VERSION_FILE):
+    with open(config.CONFIG_VERSION_FILE, "w") as f:
+        f.write("2.0.101")
+with open(config.CONFIG_VERSION_FILE, "r") as f:
+    if (upd.compareVersions(f.read(), config.CONFIG_VERSION) == 1):
+        upd.update()
+    with open(config.CONFIG_VERSION_FILE, "w") as w:
+        f.write(config.CONFIG_VERSION)
 
 # Include endpoints
 from endpoints.login import loginApi

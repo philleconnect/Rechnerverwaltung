@@ -7,6 +7,9 @@
 # Include dependencies
 import os
 
+# Actual version
+CONFIG_VERSION = "2.0.102"
+
 # Base config file path
 CONFIG_BASE = "/etc/pc_admin"
 
@@ -21,3 +24,6 @@ CONFIG_ADMINUSER_FILE = CONFIG_BASE + "/.AdminSetupDone"
 
 # Secret key
 CONFIG_SECRET_KEY = CONFIG_BASE + "/SecretKey.txt"
+
+# Version file
+CONFIG_VERSION_FILE = CONFIG_BASE + "/InstalledVersion.txt"

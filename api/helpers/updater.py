@@ -20,7 +20,7 @@ def runUpdate(previousVersion):
         dbconn.commit()
 
 # Compares version numbers
-def compareVersions(self, v1, v2):
+def compareVersions(v1, v2):
     l1 = v1.split(".")
     l2 = v2.split(".")
     for i in range(3):

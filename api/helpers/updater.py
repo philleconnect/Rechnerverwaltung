@@ -16,7 +16,7 @@ def runUpdate(previousVersion):
         dbconn = db.database()
         dbconn.execute("INSERT INTO permission (name, info, detail) VALUES (\"Passwort selbst zurücksetzen\", \"Nutzer kann sein Passwort selbst zurücksetzen, wenn eine E-Mail Adresse eingetragen ist.\", \"emailrst\")")
         dbconn.execute("INSERT INTO permission (name, info, detail) VALUES (\"Gruppenlisten einsehen\", \"Nutzer kann für all seine Gruppen eine Liste der Mitglieder einsehen und laden.\", \"grouplst\")")
-        dbconn.execute("CREATE TABLE IF NOT EXISTS `schoolconnect`.`mailreset` (`time` TIMESTAMP NOT NULL, `token` VARCHAR(512) NOT NULL, `people_id` VARCHAR(64) NOT NULL, PRIMARY KEY (`time`, `people_id`), UNIQUE INDEX `token_UNIQUE` (`token` ASC), INDEX `fk_mailreset_people1_idx` (`people_id` ASC), CONSTRAINT `fk_mailreset_people1` FOREIGN KEY (`people_id`) REFERENCES `schoolconnect`.`people` (`id`) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE = InnoDB;")
+        dbconn.execute("CREATE TABLE IF NOT EXISTS `schoolconnect`.`mailreset` (`time` TIMESTAMP NOT NULL, `token` VARCHAR(512) NOT NULL, `people_id` VARCHAR(64) NOT NULL, `unix_hash` TEXT NOT NULL, `smb_hash` TEXT NOT NULL, PRIMARY KEY (`time`, `people_id`), UNIQUE INDEX `token_UNIQUE` (`token` ASC), INDEX `fk_mailreset_people1_idx` (`people_id` ASC), CONSTRAINT `fk_mailreset_people1` FOREIGN KEY (`people_id`) REFERENCES `schoolconnect`.`people` (`id`) ON DELETE CASCADE ON UPDATE CASCADE) ENGINE = InnoDB;")
         dbconn.commit()
 
 # Compares version numbers

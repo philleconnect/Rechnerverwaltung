@@ -129,7 +129,7 @@ export default {
           setTimeout(function() {this.pendingChecker();}.bind(this), 2000);
         } else {
           response = JSON.parse(response.responseText);
-          if (response.result == "updating") {
+          if (response.result == "updating" || response.result == "installing") {
             setTimeout(function() {this.pendingChecker();}.bind(this), 2000);
           } else if (response.result == "running") {
             Swal.fire({

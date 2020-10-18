@@ -8,6 +8,9 @@
     <button @click="setUpdateBranch('production')" id="production-button" class="nodisplay">In Production-Branch wechseln</button>
     <br />
     <br />
+    <button @click="checkForUpdates()">Nach Updates suchen</button>
+    <br />
+    <br />
     <p>Grundfunktionen:</p>
     <div class="datagrid">
       <table id="services">
@@ -445,6 +448,15 @@ export default {
           }.bind(this))
         }.bind(this)
       })
+    },
+
+    // Check for Updates
+    checkForUpdates: function() {
+      preloader.toggle("LADEN");
+      api.send("/api/servermanager", "POST", {url: "/checkforupdates"}).then(function(response) {
+        preloader.hide();
+        this.get();
+      }.bind(this));
     }
   },
   on: {

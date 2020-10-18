@@ -83,13 +83,27 @@ export default {
           env[key]["value"] = document.getElementById("env-" + key).value;
         }
       }
-      this.update();
+      this.storeenv();
     },
     back: function() {
       progress.prev();
     },
 
     // Update progress
+    storeenv: function() {
+      api.send("/api/servermanager", "POST", {url: "/storeenv", data: JSON.stringify({data: JSON.stringify(env)})}).then(function(response) {
+        response = JSON.parse(response);
+        if (response.result == "SUCCESS") {
+          this.update();
+        } else {
+          Swal.fire({
+            title: "Es ist ein interner Fehler aufgetreten.",
+            text: "Bitte erneut versuchen.",
+            icon: "error"
+          })
+        }
+      }.bind(this))
+    },
     update: function() {
       api.send("/api/servermanager", "POST", {url: "/executeupdate", data: JSON.stringify({service: this.$route.params.name, version: this.$route.params.version})}).then(function(response) {
         var response = JSON.parse(response);

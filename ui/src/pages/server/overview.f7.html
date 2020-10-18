@@ -315,21 +315,14 @@ export default {
           response = JSON.parse(response.responseText);
           if (response.result == "reverting") {
             setTimeout(function() {this.revertPendingChecker(name);}.bind(this), 2000);
-          } else if (response.result == "running") {
+          } else if (response.result == "running" || response.result == "paused") {
             Swal.fire({
               title: "Service '" + name + "' wurde erfolgreich auf die vorherige Version zurückgesetzt.",
               icon: "success"
             }).then(function() {
-              window.app.views.main.router.navigate("/server");
-            })
-          } else if (response.result == "paused") {
-            Swal.fire({
-              title: "Service '" + name + "' wurde erfolgreich auf die vorherige Version zurückgesetzt.",
-              icon: "success"
-            }).then(() => {
-              window.app.views.main.router.navigate("/server");
-            })
-          } else {
+              this.get();
+            }.bind(this))
+          } else {
             Swal.fire({
               title: "Es ist ein Fehler aufgetreten.",
               text: "'" + name  + "' konnte nicht auf die vorherige Version zurückgesetzt werden.",

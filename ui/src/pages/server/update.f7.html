@@ -94,7 +94,14 @@ export default {
       api.send("/api/servermanager", "POST", {url: "/storeenv", data: JSON.stringify({data: JSON.stringify(env)})}).then(function(response) {
         response = JSON.parse(response);
         if (response.result == "SUCCESS") {
-          this.pendingChecker();
+          Swal.fire({
+            title: "Aktualisierung läuft",
+            allowEscapeKey: false,
+            allowOutsideClick: false,
+            onOpen: function() {
+              Swal.showLoading();
+              this.pendingChecker();
+            }.bind(this)
         } else {
           Swal.fire({
             title: "Es ist ein interner Fehler aufgetreten.",

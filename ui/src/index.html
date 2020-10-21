@@ -24,7 +24,7 @@
         </table>
       </div>
     </div>
-    <div role="navigation" id="foo" class="nav-collapse">
+    <div role="navigation" id="menu" class="nav-collapse">
       <div class="top">
         <img src="static/logo.png">
         <li>
@@ -36,7 +36,13 @@
     </div>
     <div class="views">
       <div class="view view-main safe-areas main" role="main" data-url="/">
-        <a href="#nav" class="nav-toggle">Menu</a>
+        <div class="mobile-menu-toggle" id="mobile-toggle" onclick="window.mobilemenu.toggle()">
+          <a class="hamburger hamburger--spin nav-toggle" href="#nav" id="hamburger">
+            <div class="hamburger-box">
+              <div class="hamburger-inner"></div>
+            </div>
+          </a>
+        </div>
         <noscript>
           <p>Dein Browser unterstützt kein JavaScript oder JavaScript ist ausgeschaltet. Du musst JavaScript aktivieren, um diese Seite zu verwenden!</p>
         </noscript>

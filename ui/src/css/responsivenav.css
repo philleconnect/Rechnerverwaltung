@@ -183,22 +183,32 @@ html {
     top: 0px;
     background-color: #1155BC;
 }
+.headline {
+  font-family: Arial, sans-serif;
+  font-size: 45px;
+}
+.page-previous {
+  display: none;
+}
 /*Responsive CSS*/
-@media screen and (max-width: 40em) {
-    .js .nav-collapse {
+@media screen and (min-width: 1001px) {
+    .mobile-menu-toggle {
+        display: none;
+    }
+}
+@media screen and (max-width: 1000px) {
+    .nav-collapse {
         clip: rect(0 0 0 0);
         max-height: 0;
-        position: absolute;
         display: block;
         overflow: hidden;
-    }
-    .nav-collapse {
         top: 0;
         width: 100%;
         position: relative;
+        transition: max-height 284ms;
     }
     .nav-collapse.opened {
-        max-height: 9999px;
+        max-height: 1150px;
     }
     .nav-collapse a:hover {
         background: transparent;
@@ -207,50 +217,35 @@ html {
         color: #fff;
         background: rgba(0,0,0, .3);
     }
-    .nav-toggle {
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        user-select: none;
-        text-decoration: none;
-        text-indent: -999px;
-        position: relative;
-        overflow: hidden;
-        width: 70px;
-        height: 55px;
-        float: right;
-        display: block;
-        margin: 0 -2em 1em 0;
-    }
-    .nav-toggle:before {
-        color: #1155BC;
-        font-family: "responsivenav";
-        font-style: normal;
-        font-weight: normal;
-        font-variant: normal;
-        font-size: 28px;
-        text-transform: none;
-        position: absolute;
-        content: "\2261";
-        text-indent: 0;
-        text-align: center;
-        line-height: 65px;
-        speak: none;
+    .mobile-menu-toggle {
         width: 100%;
-        top: 0;
-        left: 0;
+        height: calc(45px + .8em);
+        position: fixed;
+        left: 0px;
+        top: 0px;
+        color: black;
+        transition: background-color 0.5s;
     }
-    .nav-toggle.active:before {
-        font-size: 24px;
-        content: "\78";
+    .mobile-menu-toggle .hamburger {
+        margin-top: .8em;
+        float: right;
+        color: black;
+    }
+    html:not(.js-nav-active) .mobile-menu-toggle.scrolled {
+        background: rgba(256, 256, 256, .85);
+    }
+    @supports ((-webkit-backdrop-filter: initial) or (backdrop-filter: initial)) {
+        html:not(.js-nav-active) .mobile-menu-toggle.scrolled {
+            background: rgba(256, 256, 256, .6);
+            -webkit-backdrop-filter: saturate(180%) blur(5px) !important;
+            backdrop-filter: saturate(180%) blur(5px) !important;
+        }
     }
     .main {
         -webkit-overflow-scrolling: auto;
         box-shadow: none;
-        padding: 0 2em 2em;
+        padding: 45px 10px 10px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
         border-radius: 0;
         position: relative;
         width: 100%;
@@ -258,6 +253,37 @@ html {
     }
     .main::-webkit-scrollbar {
         background-color: transparent;
+    }
+    .top img {
+        margin-top: 15px;
+    }
+    .headline {
+        font-size: 25px;
+        margin-bottom: 5px;
+    }
+    h3 {
+        margin-bottom: 5px;
+    }
+    .small-menue {
+        font-size: 12px;
+        margin-left: 20px;
+    }
+    #timeout {
+        margin: 0px;
+    }
+    .datagrid {
+        margin-bottom: 10px;
+    }
+    .login-shown .main, .login-shown .nav-collapse {
+        display: none;
+    }
+}
+@media screen and (max-width: 330px) {
+    .headline {
+        font-size: 20px;
+    }
+    h3 {
+        font-size: 1.05em
     }
 }
 @media screen and (-webkit-min-device-pixel-ratio: 1.3), screen and (min--moz-device-pixel-ratio: 1.3), screen and (-o-min-device-pixel-ratio: 2 / 1), screen and (min-device-pixel-ratio: 1.3), screen and (min-resolution: 192dpi), screen and (min-resolution: 2dppx) {

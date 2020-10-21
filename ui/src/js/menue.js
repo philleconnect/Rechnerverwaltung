@@ -62,10 +62,10 @@ let menue = {
         document.getElementById("menue").innerHTML = "";
         for (const element of this.entries) {
           if (this.currentUserHasPermission(element[2])) {
-            document.getElementById("menue").innerHTML += "<li id=\"menu-" + element[0] + "\" class=\"menu-item\"><a href=\"#\" onclick=\"window.app.views.main.router.navigate('" + element[1] + "')\">" + element[0] + "</a></li>";
+            document.getElementById("menue").innerHTML += "<li id=\"menu-" + element[0] + "\" class=\"menu-item\"><a href=\"#\" onclick=\"window.mobilemenu.close();window.app.views.main.router.navigate('" + element[1] + "')\">" + element[0] + "</a></li>";
             if (element.length > 3) {
               for (const subelement of element[3]) {
-                document.getElementById("menue").innerHTML += "<li id=\"menu-" + subelement[0] + "\" class=\"menu-item\"><a href=\"#\" onclick=\"window.app.views.main.router.navigate('" + subelement[1] + "')\" class=\"subnav\">" + subelement[0] + "</a></li>";
+                document.getElementById("menue").innerHTML += "<li id=\"menu-" + subelement[0] + "\" class=\"menu-item\"><a href=\"#\" onclick=\"window.mobilemenu.close();window.app.views.main.router.navigate('" + subelement[1] + "')\" class=\"subnav\">" + subelement[0] + "</a></li>";
               }
             }
           }

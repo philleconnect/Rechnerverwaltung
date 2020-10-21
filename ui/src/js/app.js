@@ -11,6 +11,7 @@ import '../css/progress.css';
 import '../css/responsivenav.css';
 import '../css/spoiler.css';
 import '../css/table.css';
+import '../css/hamburgers.min.css';
 
 // Import libraries
 import Swal from 'sweetalert2';
@@ -23,6 +24,9 @@ import api from './api.js';
 import login from './login.js';
 import menue from './menue.js';
 import timeout from './timeout.js';
+import mobilemenu from './mobile-menu.js';
+
+import './mobile-menu-scrolling.js';
 
 // Import main app component
 import App from '../app.f7.html';
@@ -52,6 +56,7 @@ let mainView = window.app.views.create(".view-main", {
   pushState: true,
   pushStateAnimate: false,
   pushStateSeparator: "#page",
+  removeElements: false
 })
 
 // Make the back button work
@@ -75,3 +80,5 @@ api.send("/api/setup/status", "GET", {}).then(function(response) {
     login.show();
   }
 })
+
+window.mobilemenu = mobilemenu;

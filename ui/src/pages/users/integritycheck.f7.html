@@ -508,7 +508,11 @@ export default {
           }
         }
       }
-      if (!taskRunning) this.fixAllRunnerFinish();
+      if (!taskRunning) {
+        setTimeout(function() {
+          this.fixAllRunnerFinish();
+        }.bind(this), 100);
+      }
     },
     fixAllRunnerFinish: function() {
       Swal.fire({

@@ -27,7 +27,12 @@ def createSession():
         user = apiUser.apiUser(results[0]["id"])
         login_user(user)
         pCheck = pc.permissionCheck()
-        return jsonify(pCheck.get(current_user.username)), 200
+        permissions = pCheck.get(current_user.username)
+        hasAnyRequiredPermission = False
+        for permission in ["usermgmt", "devimgmt", "servmgmt"]:
+            if permission in permissions:
+                return jsonify(permissions), 200
+        return "ERR_ACCESS_DENIED", 403
     else:
         return "ERR_ACCESS_DENIED", 401
 

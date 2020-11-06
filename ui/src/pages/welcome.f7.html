@@ -14,8 +14,11 @@
       <div id="integrity-is-running" class="standalone-container nodisplay">
         <i class="f7-icons standalone-icon" style="color: #1155BC;">info_circle_fill</i><h4 class="standalone-icon-headline">Es wird gerade ein Integritätscheck durchgeführt...</h4>
       </div>
-      <div id="integrity-not-ok" class="standalone-container nodisplay">
-        <i class="f7-icons standalone-icon" style="color: red;">xmark_circle_fill</i><h4 class="standalone-icon-headline">Es wurden Fehler festgestellt. Weitere Infos im Menüpunkt "Integritätscheck". Letzte Prüfung: <span class="last-check">Keine Prüfung durchgeführt.</span></h4>
+      <div id="integrity-not-ok" class="nodisplay">
+        <div class="standalone-container">
+          <i class="f7-icons standalone-icon" style="color: red;">xmark_circle_fill</i><h4 class="standalone-icon-headline">Es wurden Fehler festgestellt. Weitere Infos im Menüpunkt "Integritätscheck". Letzte Prüfung: <span class="last-check">Keine Prüfung durchgeführt.</span></h4>
+        </div>
+        <button @click="routeIntegrityCheck()">Fehler überprüfen</button>
       </div>
     </div>
     <br />
@@ -26,8 +29,11 @@
       <div id="server-all-ok" class="standalone-container nodisplay">
         <i class="f7-icons standalone-icon" style="color: green;">checkmark_circle_fill</i><h4 class="standalone-icon-headline">Das System ist auf dem neuesten Stand!</h4>
       </div>
-      <div id="server-update-available" class="standalone-container nodisplay">
-        <i class="f7-icons standalone-icon" style="color: #1155BC;">info_circle_fill</i><h4 class="standalone-icon-headline">Es sind Updates verfügbar. Weitere Infos im Menüpunkt "Server".</h4>
+      <div id="server-update-available" class="nodisplay">
+        <div class="standalone-container">
+          <i class="f7-icons standalone-icon" style="color: #1155BC;">info_circle_fill</i><h4 class="standalone-icon-headline">Es sind Updates verfügbar. Weitere Infos im Menüpunkt "Server".</h4>
+        </div>
+        <button @click="routeServer()">Updates überprüfen</button>
       </div>
     </div>
   </div>
@@ -135,6 +141,12 @@ export default {
         document.getElementById("server-all-ok").classList.add("nodisplay");
         document.getElementById("server-update-available").classList.remove("nodisplay");
       }
+    },
+    routeIntegrityCheck: function() {
+      window.app.views.main.router.navigate("/users/integritycheck");
+    },
+    routeServer: function() {
+      window.app.views.main.router.navigate("/server");
     }
   },
   on: {

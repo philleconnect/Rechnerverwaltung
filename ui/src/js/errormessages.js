@@ -143,6 +143,11 @@ let errormsg = {
       title: "Der aktuell angemeldete Account kann nicht gelöscht werden.",
       text: "",
       showWarningSign: false
+    },
+    ERR_INPUT_ERROR: {
+      title: "Fehelrhafte Eingaben.",
+      text: "",
+      showWarningSign: false
     }
   },
   fire: function(message) {

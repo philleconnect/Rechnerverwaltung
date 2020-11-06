@@ -51,6 +51,8 @@ def createGroup():
     dbconn = db.database()
     lg = ldap.groups()
     failed = False
+    if request.form.get("name") == "":
+        return "ERR_INPUT_ERROR", 500
     dbconn.execute("INSERT INTO groups (name, info, type) VALUES (%s, %s, %s)", (request.form.get("name"), request.form.get("info"), request.form.get("type")))
     if not dbconn.commit():
         return "ERR_DATABASE_ERROR", 500

@@ -12,6 +12,7 @@ import api from './api.js';
 // Module definition
 let menue = {
     entries: [
+        ["Dashboard","/welcome",["*"]],
         ["Accounts","/users",["usermgmt"],
             [
                 ["Account hinzufügen","/users/create"],

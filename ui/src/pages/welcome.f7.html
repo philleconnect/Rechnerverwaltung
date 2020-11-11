@@ -150,7 +150,7 @@ export default {
     }
   },
   on: {
-    pageInit: function() {
+    pageBeforeIn: function() {
       this.loadName();
       if (window.currentUserPermissions.includes("usermgmt")) {
         this.loadUsersGroups();

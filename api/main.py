@@ -73,6 +73,7 @@ api = Flask(__name__)
 SESSION_TYPE = "filesystem"
 SESSION_COOKIE_NAME = "SC_SESSION"
 SESSION_COOKIE_SECURE = False # Set this to true for production (SSL required)
+SESSION_COOKIE_HTTPONLY = True
 PERMANENT_SESSION_LIFETIME = 1200
 api.config.from_object(__name__)
 with open(config.CONFIG_SECRET_KEY, "r") as f:

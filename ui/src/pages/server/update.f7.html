@@ -34,7 +34,7 @@
             </table>
           </div>
         </div>
-        <button @click="finish2()">Weiter</button>
+        <button @click="finish2()" id="continue-2-button" class="nodisplay">Weiter</button>
       </div>
       <div class="steps-content-box disabled" id="step-3">
         <p>Das Plugin "<span class="plugin-name"></span>" wird jetzt aktualisiert. Dies kann einige Zeit dauern. Bitte unterbrechen Sie diesen Prozess nicht.</p>
@@ -66,6 +66,7 @@ export default {
           tableRow += "<td>" + key + "</td><td>" + env[key].description + "</td><td><input type=\"text\" id=\"env-" + key + "\"/></td></tr>";
         }
         document.getElementById("content").innerHTML = tableRow;
+        document.getElementById("continue-2-button").classList.remove("nodisplay");
       } else {
         document.getElementById("settings-required").classList.add("nodisplay");
         document.getElementById("no-settings-required").classList.remove("nodisplay");

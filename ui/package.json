@@ -24,7 +24,7 @@
     "dom7": "^2.1.5",
     "framework7": "^5.7.12",
     "framework7-icons": "^3.0.1",
-    "sweetalert2": "^9.17.2",
+    "sweetalert2": "^10.15.5",
     "template7": "^1.4.2"
   },
   "devDependencies": {
@@ -49,7 +49,7 @@
     "postcss-preset-env": "^6.7.0",
     "rimraf": "^3.0.2",
     "style-loader": "^1.2.1",
-    "tablefilter": "^0.6.110",
+    "tablefilter": "^0.7.2",
     "terser-webpack-plugin": "^2.3.8",
     "url-loader": "^4.1.0",
     "webpack": "^4.44.2",
